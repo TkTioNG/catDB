@@ -12,9 +12,15 @@ class Home(models.Model):
     House of a person.
     name: Name of the house? TODO: to be confirm
     address: address of the house.
-    type: type of the house (landed|condominium)
+    hometype: type of the house (landed|condominium)
     """
-    pass
+    class HomeType(models.TextChoices):
+        LANDED = 'landed'
+        CONDOMINIUM = 'condominium'
+    
+    name = models.CharField(max_length=30)
+    address = models.CharField(max_length=300)
+    hometype = models.CharField(max_length=11, choices=HomeType.choices)
 
 
 class Breed(models.Model):
