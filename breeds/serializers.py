@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 from .models import Breed, Cat, Home, Human
 
 
@@ -29,9 +30,14 @@ class BreedSerializer(serializers.HyperlinkedModelSerializer):
     def get_breed_homes(self, obj):
         all_owners = Cat.objects.filter(breed=obj.id).values_list(
             'owner', flat=True).distinct()
-        homes = list(Home.objects.filter(human__id__in=
-                     all_owners).values_list('id', flat=True))
-        return homes
+        homes = list(Home.objects.filter(
+            human__id__in=all_owners).values_list('id', flat=True))
+        result = [
+            "{}".format(reverse('breeds:home-detail',
+                                args=[home_id], request=self.context['request']))
+            for home_id in homes
+        ]
+        return result
 
     class Meta:
         model = Breed
@@ -81,7 +87,12 @@ class CatSerializer(serializers.HyperlinkedModelSerializer):
 
     def get_cat_home(self, obj):
         cat_home = Human.objects.get(id=obj.owner_id).home_id
-        return cat_home
+        result = "{}".format(
+            reverse('breeds:home-detail',
+                    args=[cat_home],
+                    request=self.context['request'])
+        )
+        return result
 
     class Meta:
         model = Cat
