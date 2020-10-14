@@ -19,6 +19,19 @@ class BreedSerializer(serializers.HyperlinkedModelSerializer):
     docstring
     """
     url = serializers.HyperlinkedIdentityField(view_name="breeds:breed-detail")
+    cats = serializers.HyperlinkedRelatedField(
+        many=True,
+        read_only=True,
+        view_name='breeds:cat-detail'
+    )
+    homes = serializers.SerializerMethodField('get_breed_homes')
+
+    def get_breed_homes(self, obj):
+        all_owners = Cat.objects.filter(breed=obj.id).values_list(
+            'owner', flat=True).distinct()
+        homes = list(Home.objects.filter(human__id__in=
+                     all_owners).values_list('id', flat=True))
+        return homes
 
     class Meta:
         model = Breed
@@ -33,6 +46,11 @@ class HumanSerializer(serializers.HyperlinkedModelSerializer):
     home = serializers.HyperlinkedRelatedField(
         view_name='breeds:home-detail',
         queryset=Home.objects.all()
+    )
+    cats = serializers.HyperlinkedRelatedField(
+        many=True,
+        read_only=True,
+        view_name='breeds:cat-detail',
     )
 
     class Meta:
@@ -53,6 +71,17 @@ class CatSerializer(serializers.HyperlinkedModelSerializer):
         view_name="breeds:human-detail",
         queryset=Human.objects.all()
     )
+    '''
+    home = serializers.HyperlinkedRelatedField(
+        view_name='breeds:home-detail',
+        read_only=True
+    )
+    '''
+    home = serializers.SerializerMethodField('get_cat_home')
+
+    def get_cat_home(self, obj):
+        cat_home = Human.objects.get(id=obj.owner_id).home_id
+        return cat_home
 
     class Meta:
         model = Cat
