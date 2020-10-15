@@ -6,6 +6,11 @@ from rest_framework.authtoken.models import Token
 
 
 class ExpiringTokenAuthentication(TokenAuthentication):
+    """
+    Custom token authentication that will be expring within 1 hour.
+    """
+
+    # overwrite
     def authenticate_credentials(self, key):
         try:
             token = Token.objects.get(key=key)
@@ -14,9 +19,8 @@ class ExpiringTokenAuthentication(TokenAuthentication):
 
         if not token.user.is_active:
             raise AuthenticationFailed("User is inactive")
-        
+
         if timezone.now() - token.created > timedelta(hours=1):
             raise AuthenticationFailed("Token has expired")
-        
+
         return (token.user, token)
-        

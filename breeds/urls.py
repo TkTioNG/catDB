@@ -12,7 +12,8 @@ router.register(r'homes', views.HomeViewSet)
 router.register(r'humans', views.HumanViewSet)
 
 urlpatterns = [
-    path('', views.index, name='index'),
     path('api/', include(router.urls)),
+    # Expose token end point to create token for registered user
     path('api-token-auth/', auth_views.obtain_auth_token),
 ]
+# TODO: Create end point that can renew the token  
