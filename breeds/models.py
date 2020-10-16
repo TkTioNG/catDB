@@ -24,6 +24,9 @@ class Home(models.Model):
     
     def __str__(self):
         return self.name
+    
+    class Meta:
+        ordering = ['-id']
 
 
 class Breed(models.Model):
@@ -39,6 +42,9 @@ class Breed(models.Model):
 
     def __str__(self):
         return self.name
+    
+    class Meta:
+        ordering = ['name']
 
 
 class Human(models.Model):
@@ -59,6 +65,9 @@ class Human(models.Model):
     
     def __str__(self):
         return self.name
+    
+    class Meta:
+        ordering = ['name']
 
 
 class Cat(models.Model):
@@ -81,3 +90,6 @@ class Cat(models.Model):
 
     def __str__(self):
         return self.name
+    
+    class Meta:
+        ordering = ['name']
