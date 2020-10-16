@@ -35,7 +35,7 @@ class Breed(models.Model):
     """
     name = models.CharField(max_length=30, unique=True)
     origin = models.CharField(max_length=30)
-    description = models.CharField(max_length=300)
+    description = models.CharField(max_length=300, blank=True)
 
     def __str__(self):
         return self.name
