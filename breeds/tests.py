@@ -9,7 +9,6 @@ from rest_framework.test import APITestCase
 from rest_framework.reverse import reverse
 from rest_framework.authtoken.models import Token
 
-# from .models import Breed, Cat, Home, Human
 from .factories import BreedFactory, CatFactory, HomeFactory, HumanFactory
 from .authentication import EXPIRING_HOUR
 
@@ -21,8 +20,6 @@ VALID_EMAIL = "email@testing.com"
 
 def create_token():
     # Create a valid token
-    # TODO: Modify it by returning user so that the user
-    # token can be set to expire based on the user
     user = User.objects.create(username=VALID_USERNAME,
                                password=VALID_USERNAME,
                                email=VALID_EMAIL)
@@ -42,6 +39,7 @@ def get_valid_token_key():
 
 def get_expired_token_key():
     expired_token = create_token()
+    # Expiring the token manually
     expired_token.created = timezone.now() - timedelta(hours=EXPIRING_HOUR,
                                                        seconds=1)
     expired_token.save()
@@ -57,34 +55,41 @@ def get_invalid_token_key():
 
 
 class BaseTestCase(APITestCase):
+    '''
+    Base Test Case Template that provide `add (POST)`, `remove (DELETE)`, 
+    `modify (PUT)`, `partial modify (PATCH)`, `retrieve (GET)` function.
+    '''
+
+    def login_with_token(self, token):
+        self.client.credentials(HTTP_AUTHORIZATION=token)
 
     def add_obj(self, url, data, token=None):
         if token:
-            self.client.credentials(HTTP_AUTHORIZATION=token)
+            self.login_with_token(token)
         response = self.client.post(reverse(url), data=data)
         return response
 
     def remove_obj(self, url, data, pk, token=None):
         if token:
-            self.client.credentials(HTTP_AUTHORIZATION=token)
+            self.login_with_token(token)
         response = self.client.delete(reverse(url, args=[pk]), data=data)
         return response
 
     def modify_obj(self, url, data, pk, token=None):
         if token:
-            self.client.credentials(HTTP_AUTHORIZATION=token)
+            self.login_with_token(token)
         response = self.client.put(reverse(url, args=[pk]), data=data)
         return response
 
     def partial_modify_obj(self, url, data, pk, token=None):
         if token:
-            self.client.credentials(HTTP_AUTHORIZATION=token)
+            self.login_with_token(token)
         response = self.client.patch(reverse(url, args=[pk]), data=data)
         return response
 
-    def retrieve_obj(self, url, data, pk, token=None):
+    def retrieve_obj(self, url, pk, data=None, token=None):
         if token:
-            self.client.credentials(HTTP_AUTHORIZATION=token)
+            self.login_with_token(token)
         response = self.client.get(reverse(url, args=[pk]), data=data)
         return response
 
@@ -101,6 +106,7 @@ class HomeViewSetTests(BaseTestCase):
         self.list_url = 'breeds:home-list'
         self.detail_url = 'breeds:home-detail'
         self.data = factory.build(dict, FACTORY_CLASS=HomeFactory)
+        # used as modified data scheme
         self.new_data = factory.build(dict, FACTORY_CLASS=HomeFactory)
 
     def create_home_obj(self):
@@ -158,6 +164,7 @@ class HomeViewSetTests(BaseTestCase):
     # Test Case: #THV-005
     def test_remove_home_obj_with_valid_token(self):
         home_obj = self.create_home_obj()
+        # attempt to remove the home_obj created
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -224,6 +231,7 @@ class HomeViewSetTests(BaseTestCase):
             response.status_code, status.HTTP_200_OK,
             "#THV-009: Modify home object with valid token failed"
         )
+        # Convert http response to json for comparing purpose
         json_data = response.json()
         modified_data = {
             'name': json_data.get('name', None),
@@ -281,7 +289,7 @@ class HomeViewSetTests(BaseTestCase):
     # Test Case: #THV-013
     def test_partial_modify_home_obj_with_valid_token(self):
         home_obj = self.create_home_obj()
-        self.data['name'] = "modify test name"
+        self.data['name'] = "modify test name"  # modifying name only
         response = self.partial_modify_obj(
             url=self.detail_url,
             data=self.data,
@@ -360,6 +368,7 @@ class HomeViewSetTests(BaseTestCase):
             response.status_code, status.HTTP_200_OK,
             "#THV-017: Retrieve one home object failed"
         )
+        # Convert http response to json for comparing purpose
         json_data = response.json()
         retrieved_data = {
             'name': json_data.get('name', None),
@@ -381,6 +390,7 @@ class BreedViewSetTests(BaseTestCase):
         self.list_url = 'breeds:breed-list'
         self.detail_url = 'breeds:breed-detail'
         self.data = factory.build(dict, FACTORY_CLASS=BreedFactory)
+        # dict of Breed object as modifying data scheme
         self.new_data = factory.build(dict, FACTORY_CLASS=BreedFactory)
 
     def create_breed_obj(self):
@@ -572,6 +582,7 @@ class BreedViewSetTests(BaseTestCase):
             response.status_code, status.HTTP_200_OK,
             "#TBV-013: partial_modify breed object with valid token failed"
         )
+        # Convert http response to json for comparing purpose
         json_data = response.json()
         modified_data = {
             'name': json_data.get('name', None),
@@ -640,6 +651,7 @@ class BreedViewSetTests(BaseTestCase):
             response.status_code, status.HTTP_200_OK,
             "#TBV-017: Retrieve one breed object failed"
         )
+        # Convert http response to json for comparing purpose
         json_data = response.json()
         retrieved_data = {
             'name': json_data.get('name', None),
@@ -649,4 +661,640 @@ class BreedViewSetTests(BaseTestCase):
         self.assertEqual(
             retrieved_data, self.data,
             "#TBV-017: Retrieve data is not same as the posted data"
+        )
+
+
+class HumanViewSetTests(BaseTestCase):
+    # Test Case Code Format; #TPV-000
+    # Current Test Case Sequence: TPV-017
+
+    # initialise before each test case
+    def setUp(self):
+        self.list_url = 'breeds:human-list'
+        self.detail_url = 'breeds:human-detail'
+
+        # home FK is created before creating the Human object
+        self.data = factory.build(
+            dict, FACTORY_CLASS=HumanFactory, home=HomeFactory.create())
+        # Serve as the modifying data scheme
+        self.new_data = factory.build(
+            dict, FACTORY_CLASS=HumanFactory, home=HomeFactory.create())
+        # Parsing the human object into acceptable dict object
+        self.parse_obj(self.data, self.new_data)
+
+    def parse_obj(self, *dicts):
+        for d in dicts:
+            # convert FK to hyperlink
+            d['home'] = 'http://testserver' \
+                        + reverse('breeds:home-detail', args=[d['home'].id])
+            # convert datetime object into str, default format(yyyy-mm-dd)
+            d['date_of_birth'] = str(d['date_of_birth'])
+
+    def create_human_obj(self):
+        return HumanFactory.create()
+
+    # Test cases for adding a new human object
+    # Test Case: #TPV-001
+    def test_add_human_obj_with_valid_token(self):
+        response = self.add_obj(
+            url=self.list_url,
+            data=self.data,
+            token=get_valid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_201_CREATED,
+            "#TPV-001: Add human object with valid token failed"
+        )
+
+    # Test Case: #TPV-002
+    def test_add_human_obj_with_expired_token(self):
+        response = self.add_obj(
+            url=self.list_url,
+            data=self.data,
+            token=get_expired_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-002: Able to add human object with expired token"
+        )
+
+    # Test Case: #TPV-003
+    def test_add_human_obj_with_invalid_token(self):
+        response = self.add_obj(
+            url=self.list_url,
+            data=self.data,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-003: Able to add human object with invalid token"
+        )
+
+    # Test Case: #TPV-004
+    def test_add_human_obj_without_token(self):
+        response = self.add_obj(
+            url=self.list_url,
+            data=self.data,
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-004: Able to add human object without token"
+        )
+
+    # test cases for removing an existing human object
+    # Test Case: #TPV-005
+    def test_remove_human_obj_with_valid_token(self):
+        human_obj = self.create_human_obj()
+        response = self.remove_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=human_obj.pk,
+            token=get_valid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_204_NO_CONTENT,
+            "#TPV-005: Remove human object with valid token failed"
+        )
+
+    # Test Case: #TPV-006
+    def test_remove_human_obj_with_expired_token(self):
+        human_obj = self.create_human_obj()
+        response = self.remove_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=human_obj.pk,
+            token=get_expired_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-006: Able to remove human object with expired token"
+        )
+
+    # Test Case: #TPV-007
+    def test_remove_human_obj_with_invalid_token(self):
+        human_obj = self.create_human_obj()
+        response = self.remove_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=human_obj.pk,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-007: Able to remove human object with invalid token"
+        )
+
+    # Test Case: #TPV-008
+    def test_remove_human_obj_without_token(self):
+        human_obj = self.create_human_obj()
+        response = self.remove_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=human_obj.pk,
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-008: Able to remove human object without token"
+        )
+
+    # test cases for modifying (put) an existing human object
+    # Test Case: #TPV-009
+    def test_modify_human_obj_with_valid_token(self):
+        human_obj = self.create_human_obj()
+        response = self.modify_obj(
+            url=self.detail_url,
+            data=self.new_data,
+            pk=human_obj.pk,
+            token=get_valid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_200_OK,
+            "#TPV-009: Modify human object with valid token failed"
+        )
+        # convert http response into json for comparing purpose
+        json_data = response.json()
+        modified_data = {
+            'name': json_data.get('name', None),
+            'gender': json_data.get('gender', None),
+            'date_of_birth': json_data.get('date_of_birth', None),
+            'description': json_data.get('description', None),
+            'home': json_data.get('home', None),
+        }
+        self.assertEqual(
+            modified_data, self.new_data,
+            "#TPV-009: Human object was not modified with valid token"
+        )
+
+    # Test Case: #TPV-010
+    def test_modify_human_obj_with_expired_token(self):
+        human_obj = self.create_human_obj()
+        response = self.modify_obj(
+            url=self.detail_url,
+            data=self.new_data,
+            pk=human_obj.pk,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-010: Able to modify human object with expired token"
+        )
+
+    # Test Case: #TPV-011
+    def test_modify_human_obj_with_invalid_token(self):
+        human_obj = self.create_human_obj()
+        response = self.modify_obj(
+            url=self.detail_url,
+            data=self.new_data,
+            pk=human_obj.pk,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-011: Able to modify human object with invalid token"
+        )
+
+    # Test Case: #TPV-012
+    def test_modify_human_obj_without_token(self):
+        human_obj = self.create_human_obj()
+        response = self.modify_obj(
+            url=self.detail_url,
+            data=self.new_data,
+            pk=human_obj.pk,
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-012: Able to modify human object without token"
+        )
+
+    # test cases for partially modifying (patch request) an
+    # existing human object
+    # Test Case: #TPV-013
+    def test_partial_modify_human_obj_with_valid_token(self):
+        human_obj = self.create_human_obj()
+        self.data['name'] = "modify test name"
+        response = self.partial_modify_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=human_obj.pk,
+            token=get_valid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_200_OK,
+            "#TPV-013: partial_modify Human object with valid token failed"
+        )
+        # convert http response into json for comparing purpose
+        json_data = response.json()
+        modified_data = {
+            'name': json_data.get('name', None),
+            'gender': json_data.get('gender', None),
+            'date_of_birth': json_data.get('date_of_birth', None),
+            'description': json_data.get('description', None),
+            'home': json_data.get('home', None),
+        }
+        self.assertEqual(
+            modified_data, self.data,
+            "#TPV-013: Human object was not partially modified with valid token"
+        )
+
+    # Test Case: #TPV-014
+    def test_partial_modify_human_obj_with_expired_token(self):
+        human_obj = self.create_human_obj()
+        self.data['name'] = "modify test name"
+        response = self.partial_modify_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=human_obj.pk,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-014: Able to partial_modify human object with expired token"
+        )
+
+    # Test Case: #TPV-015
+    def test_partial_modify_human_obj_with_invalid_token(self):
+        human_obj = self.create_human_obj()
+        self.data['name'] = "modify test name"
+        response = self.partial_modify_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=human_obj.pk,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-015: Able to partial_modify human object with invalid token"
+        )
+
+    # Test Case: #TPV-016
+    def test_partial_modify_human_obj_without_token(self):
+        human_obj = self.create_human_obj()
+        self.data['name'] = "modify test name"
+        response = self.partial_modify_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=human_obj.pk,
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TPV-016: Able to partial_modify human object without token"
+        )
+
+    # test cases for retrieving an existing human object
+    # Test Case: #TPV-017
+    def test_retrieve_human_obj_with_valid_token(self):
+        human_obj = self.create_human_obj()
+        response = self.retrieve_obj(
+            url=self.detail_url,
+            pk=human_obj.pk,
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_200_OK,
+            "#TPV-017: Retrieve one human object failed"
+        )
+        # convert http response into json for comparing purpose
+        json_data = response.json()
+        retrieved_data = {
+            'name': json_data.get('name', None),
+            'gender': json_data.get('gender', None),
+            'date_of_birth': json_data.get('date_of_birth', None),
+            'description': json_data.get('description', None),
+            'home': json_data.get('home', None),
+        }
+        # convert the human object created above into dict
+        # to compare with the http response above
+        human_obj = {
+            'name': human_obj.name,
+            'gender': human_obj.gender,
+            'date_of_birth': human_obj.date_of_birth,
+            'description': human_obj.description,
+            'home': human_obj.home,
+        }
+        # parse the dict object into the same standards as from the API
+        self.parse_obj(human_obj)
+        self.assertEqual(
+            retrieved_data, human_obj,
+            "#TPV-017: Retrieve data is not same as the posted data"
+        )
+
+
+class CatViewSetTests(BaseTestCase):
+    # Test Case Code Format; #TCV-000
+    # Current Test Case Sequence: TCV-017
+
+    # initialise before each test case
+    def setUp(self):
+        self.list_url = 'breeds:cat-list'
+        self.detail_url = 'breeds:cat-detail'
+
+        # Breed and Human FKs are created before creating the Cat object
+        self.data = factory.build(dict, FACTORY_CLASS=CatFactory,
+                                  breed=BreedFactory.create(),
+                                  owner=HumanFactory.create())
+        # Serve as the modifying data scheme
+        self.new_data = factory.build(dict, FACTORY_CLASS=CatFactory,
+                                      breed=BreedFactory.create(),
+                                      owner=HumanFactory.create())
+        # Parsing the cat object into acceptable dict object
+        self.parse_obj(self.data, self.new_data)
+
+    def parse_obj(self, *dicts):
+        for d in dicts:
+            # convert FKs to hyperlinks
+            d['breed'] = 'http://testserver' \
+                        + reverse('breeds:breed-detail', args=[d['breed'].id])
+            d['owner'] = 'http://testserver' \
+                        + reverse('breeds:human-detail', args=[d['owner'].id])
+            # convert datetime object into str, default format(yyyy-mm-dd)
+            d['date_of_birth'] = str(d['date_of_birth'])
+
+    def create_cat_obj(self):
+        return CatFactory.create()
+
+    # Test cases for adding a new cat object
+    # Test Case: #TCV-001
+    def test_add_cat_obj_with_valid_token(self):
+        response = self.add_obj(
+            url=self.list_url,
+            data=self.data,
+            token=get_valid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_201_CREATED,
+            "#TCV-001: Add cat object with valid token failed"
+        )
+
+    # Test Case: #TCV-002
+    def test_add_cat_obj_with_expired_token(self):
+        response = self.add_obj(
+            url=self.list_url,
+            data=self.data,
+            token=get_expired_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-002: Able to add cat object with expired token"
+        )
+
+    # Test Case: #TCV-003
+    def test_add_cat_obj_with_invalid_token(self):
+        response = self.add_obj(
+            url=self.list_url,
+            data=self.data,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-003: Able to add cat object with invalid token"
+        )
+
+    # Test Case: #TCV-004
+    def test_add_cat_obj_without_token(self):
+        response = self.add_obj(
+            url=self.list_url,
+            data=self.data,
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-004: Able to add cat object without token"
+        )
+
+    # test cases for removing an existing cat object
+    # Test Case: #TCV-005
+    def test_remove_cat_obj_with_valid_token(self):
+        cat_obj = self.create_cat_obj()
+        response = self.remove_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=cat_obj.pk,
+            token=get_valid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_204_NO_CONTENT,
+            "#TCV-005: Remove cat object with valid token failed"
+        )
+
+    # Test Case: #TCV-006
+    def test_remove_cat_obj_with_expired_token(self):
+        cat_obj = self.create_cat_obj()
+        response = self.remove_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=cat_obj.pk,
+            token=get_expired_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-006: Able to remove cat object with expired token"
+        )
+
+    # Test Case: #TCV-007
+    def test_remove_cat_obj_with_invalid_token(self):
+        cat_obj = self.create_cat_obj()
+        response = self.remove_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=cat_obj.pk,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-007: Able to remove cat object with invalid token"
+        )
+
+    # Test Case: #TCV-008
+    def test_remove_cat_obj_without_token(self):
+        cat_obj = self.create_cat_obj()
+        response = self.remove_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=cat_obj.pk,
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-008: Able to remove cat object without token"
+        )
+
+    # test cases for modifying (put) an existing cat object
+    # Test Case: #TCV-009
+    def test_modify_cat_obj_with_valid_token(self):
+        cat_obj = self.create_cat_obj()
+        response = self.modify_obj(
+            url=self.detail_url,
+            data=self.new_data,
+            pk=cat_obj.pk,
+            token=get_valid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_200_OK,
+            "#TCV-009: Modify cat object with valid token failed"
+        )
+        # convert http response into json for comparing purpose
+        json_data = response.json()
+        modified_data = {
+            'name': json_data.get('name', None),
+            'gender': json_data.get('gender', None),
+            'date_of_birth': json_data.get('date_of_birth', None),
+            'description': json_data.get('description', None),
+            'breed': json_data.get('breed', None),
+            'owner': json_data.get('owner', None),
+        }
+        self.assertEqual(
+            modified_data, self.new_data,
+            "#TCV-009: Cat object was not modified with valid token"
+        )
+
+    # Test Case: #TCV-010
+    def test_modify_cat_obj_with_expired_token(self):
+        cat_obj = self.create_cat_obj()
+        response = self.modify_obj(
+            url=self.detail_url,
+            data=self.new_data,
+            pk=cat_obj.pk,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-010: Able to modify cat object with expired token"
+        )
+
+    # Test Case: #TCV-011
+    def test_modify_cat_obj_with_invalid_token(self):
+        cat_obj = self.create_cat_obj()
+        response = self.modify_obj(
+            url=self.detail_url,
+            data=self.new_data,
+            pk=cat_obj.pk,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-011: Able to modify cat object with invalid token"
+        )
+
+    # Test Case: #TCV-012
+    def test_modify_cat_obj_without_token(self):
+        cat_obj = self.create_cat_obj()
+        response = self.modify_obj(
+            url=self.detail_url,
+            data=self.new_data,
+            pk=cat_obj.pk,
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-012: Able to modify cat object without token"
+        )
+
+    # test cases for partially modifying (patch request) an
+    # existing cat object
+    # Test Case: #TCV-013
+    def test_partial_modify_cat_obj_with_valid_token(self):
+        cat_obj = self.create_cat_obj()
+        self.data['name'] = "modify test name"
+        response = self.partial_modify_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=cat_obj.pk,
+            token=get_valid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_200_OK,
+            "#TCV-013: partial_modify Cat object with valid token failed"
+        )
+        # convert http response into json for comparing purpose
+        json_data = response.json()
+        modified_data = {
+            'name': json_data.get('name', None),
+            'gender': json_data.get('gender', None),
+            'date_of_birth': json_data.get('date_of_birth', None),
+            'description': json_data.get('description', None),
+            'breed': json_data.get('breed', None),
+            'owner': json_data.get('owner', None),
+        }
+        self.assertEqual(
+            modified_data, self.data,
+            "#TCV-013: Cat object was not partially modified with valid token"
+        )
+
+    # Test Case: #TCV-014
+    def test_partial_modify_cat_obj_with_expired_token(self):
+        cat_obj = self.create_cat_obj()
+        self.data['name'] = "modify test name"
+        response = self.partial_modify_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=cat_obj.pk,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-014: Able to partial_modify cat object with expired token"
+        )
+
+    # Test Case: #TCV-015
+    def test_partial_modify_cat_obj_with_invalid_token(self):
+        cat_obj = self.create_cat_obj()
+        self.data['name'] = "modify test name"
+        response = self.partial_modify_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=cat_obj.pk,
+            token=get_invalid_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-015: Able to partial_modify cat object with invalid token"
+        )
+
+    # Test Case: #TCV-016
+    def test_partial_modify_cat_obj_without_token(self):
+        cat_obj = self.create_cat_obj()
+        self.data['name'] = "modify test name"
+        response = self.partial_modify_obj(
+            url=self.detail_url,
+            data=self.data,
+            pk=cat_obj.pk,
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "#TCV-016: Able to partial_modify cat object without token"
+        )
+
+    # test cases for retrieving an existing cat object
+    # Test Case: #TCV-017
+    def test_retrieve_cat_obj_with_valid_token(self):
+        cat_obj = self.create_cat_obj()
+        response = self.retrieve_obj(
+            url=self.detail_url,
+            pk=cat_obj.pk,
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_200_OK,
+            "#TCV-017: Retrieve one cat object failed"
+        )
+        # convert http response into json for comparing purpose
+        json_data = response.json()
+        retrieved_data = {
+            'name': json_data.get('name', None),
+            'gender': json_data.get('gender', None),
+            'date_of_birth': json_data.get('date_of_birth', None),
+            'description': json_data.get('description', None),
+            'breed': json_data.get('breed', None),
+            'owner': json_data.get('owner', None),
+        }
+        # convert the cat object created above into dict
+        # to compare with the http response above
+        cat_obj = {
+            'name': cat_obj.name,
+            'gender': cat_obj.gender,
+            'date_of_birth': cat_obj.date_of_birth,
+            'description': cat_obj.description,
+            'breed': cat_obj.breed,
+            'owner': cat_obj.owner,
+        }
+        # parse the dict object into the same standards as from the API
+        self.parse_obj(cat_obj)
+        self.assertEqual(
+            retrieved_data, cat_obj,
+            "#TCV-017: Retrieve data is not same as the posted data"
         )
