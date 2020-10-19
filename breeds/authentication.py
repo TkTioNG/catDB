@@ -4,6 +4,8 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.authtoken.models import Token
 
+EXPIRING_HOUR = 24
+
 
 class ExpiringTokenAuthentication(TokenAuthentication):
     """
@@ -20,7 +22,7 @@ class ExpiringTokenAuthentication(TokenAuthentication):
         if not token.user.is_active:
             raise AuthenticationFailed("User is inactive")
 
-        if timezone.now() - token.created > timedelta(hours=24):
+        if timezone.now() - token.created > timedelta(hours=EXPIRING_HOUR):
             raise AuthenticationFailed("Token has expired")
 
         return (token.user, token)

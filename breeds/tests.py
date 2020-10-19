@@ -1,5 +1,7 @@
 import string
 import random
+from datetime import timedelta
+from django.utils import timezone
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -7,6 +9,7 @@ from rest_framework.reverse import reverse
 from rest_framework.authtoken.models import Token
 
 from .models import Breed, Cat, Home, Human
+from .authentication import EXPIRING_HOUR
 
 BASE_URL = "http://127.0.0.1:8000"
 VALID_USERNAME = "Human 1"
@@ -16,12 +19,12 @@ VALID_EMAIL = "email@testing.com"
 
 def create_token():
     # Create a valid token
-    # TODO: Modify it by returning user so that the user 
+    # TODO: Modify it by returning user so that the user
     # token can be set to expire based on the user
     user = User.objects.create(username=VALID_USERNAME,
                                password=VALID_USERNAME,
                                email=VALID_EMAIL)
-    token = Token.objects.get_or_create(user=user)
+    token = Token.objects.create(user=user)
     return token
 
 
@@ -31,16 +34,16 @@ def get_token_key_header(key):
 
 
 def get_valid_token_key():
-    valid_token, status = create_token()
+    valid_token = create_token()
     return get_token_key_header(valid_token.key)
 
 
 def get_expired_token_key():
-    # TODO: modified to obtain expired token
-    # user = User.objects.get(username=EXPIRED_USERNAME)
-    # expired_token = Token.objects.get(user=user)
-    # return get_token_key_header(expired_token.key)
-    return get_valid_token_key()
+    expired_token = create_token()
+    expired_token.created = timezone.now() - timedelta(hours=EXPIRING_HOUR, 
+                                                       seconds=1)
+    expired_token.save()
+    return get_token_key_header(expired_token.key)
 
 
 def get_invalid_token_key():
@@ -88,7 +91,7 @@ class BaseTestCase(APITestCase):
 
 
 class BreedViewSetTests(BaseTestCase):
-    
+
     # initialise before each test case
     def setUp(self):
         self.list_url = 'breeds:breed-list'
@@ -122,9 +125,17 @@ class BreedViewSetTests(BaseTestCase):
             response.status_code, status.HTTP_201_CREATED,
             "Add breed object with valid token failed"
         )
-
-    # def test_add_breed_obj_with_expired_token(self):
-    #     self.add_obj(condition="with expired token ")
+    
+    def test_add_breed_obj_with_expired_token(self):
+        response = self.add_obj(
+            url=self.list_url,
+            data=self.data,
+            token=get_expired_token_key(),
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_401_UNAUTHORIZED,
+            "Add breed object with expired token failed"
+        )
 
     def test_add_breed_obj_with_invalid_token(self):
         response = self.add_obj(
