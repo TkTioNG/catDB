@@ -20,6 +20,7 @@ class HomeFactory(factory.django.DjangoModelFactory):
         except Home.DoesNotExist:
             return 1
 
+
 class BreedFactory(factory.django.DjangoModelFactory):
 
     class Meta:
@@ -28,7 +29,7 @@ class BreedFactory(factory.django.DjangoModelFactory):
     name = factory.Sequence(lambda n: "Breed %d" % n)
     origin = factory.Faker('country')
     description = factory.Faker('text')
-    
+
     @classmethod
     def _setup_next_sequence(cls):
         try:
@@ -45,24 +46,24 @@ class HumanFactory(factory.django.DjangoModelFactory):
     name = factory.Faker('name')
     gender = factory.Iterator(Gender.choices, getter=lambda c: c[0])
     date_of_birth = factory.Faker('date_between_dates',
-        date_start=datetime.date(1990, 1, 1),
-        date_end=datetime.date(2010, 10, 18),
-    )
+                                  date_start=datetime.date(1990, 1, 1),
+                                  date_end=datetime.date(2010, 10, 18),
+                                  )
     description = factory.Faker('text')
     home = factory.SubFactory(HomeFactory)
-    
+
 
 class CatFactory(factory.django.DjangoModelFactory):
-    
+
     class Meta:
         model = Cat
-        
+
     name = factory.Faker('name')
     gender = factory.Iterator(Gender.choices, getter=lambda c: c[0])
     date_of_birth = factory.Faker('date_between_dates',
-        date_start=datetime.date(2008, 1, 1),
-        date_end=datetime.date(2020, 5, 31),
-    )
+                                  date_start=datetime.date(2008, 1, 1),
+                                  date_end=datetime.date(2020, 5, 31),
+                                  )
     description = factory.Faker('text')
-    breed = factory.SubFactory(BreedFactory) 
+    breed = factory.SubFactory(BreedFactory)
     owner = factory.SubFactory(HumanFactory)
