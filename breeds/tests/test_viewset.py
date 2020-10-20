@@ -9,12 +9,11 @@ from rest_framework.test import APITestCase
 from rest_framework.reverse import reverse
 from rest_framework.authtoken.models import Token
 
-from .factories import BreedFactory, CatFactory, HomeFactory, HumanFactory
-from .authentication import EXPIRING_HOUR
+from breeds.factories import BreedFactory, CatFactory, HomeFactory, HumanFactory
+from breeds.authentication import EXPIRING_HOUR
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "http://testserver"
 VALID_USERNAME = "Human 1"
-EXPIRED_USERNAME = "admin"
 VALID_EMAIL = "email@testing.com"
 
 

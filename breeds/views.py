@@ -1,10 +1,16 @@
+from datetime import timedelta
 from django.http import HttpResponse
-from rest_framework import viewsets
+from django.utils import timezone
+from rest_framework import viewsets, status
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
 from rest_framework.reverse import reverse
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from .serializers import (BreedSerializer, CatSerializer,
                           HomeSerializer, HumanSerializer)
 from .models import Breed, Cat, Home, Human
+from .authentication import EXPIRING_HOUR
 
 
 class HomeViewSet(viewsets.ModelViewSet):
@@ -37,3 +43,22 @@ class CatViewSet(viewsets.ModelViewSet):
     serializer_class = CatSerializer
     filterset_fields = '__all__'
     search_fields = ['name', 'gender', 'date_of_birth']
+
+
+class ObtainNewAuthToken(ObtainAuthToken):
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            token, created =  Token.objects.get_or_create(user=user)
+
+            now = timezone.now()
+            if not created and now - token.created > timedelta(hours=EXPIRING_HOUR):
+                token.delete()
+                token = Token.objects.create(user=user)
+                token.created = now
+                token.save()
+
+            return Response({'token': token.key})
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
