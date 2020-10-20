@@ -72,12 +72,6 @@ class CatSerializer(serializers.HyperlinkedModelSerializer):
         view_name="breeds:human-detail",
         queryset=Human.objects.all()
     )
-    '''
-    home = serializers.HyperlinkedRelatedField(
-        view_name='breeds:home-detail',
-        read_only=True
-    )
-    '''
     # Customize the method field to produce a hyperlink to the Home model
     # through the cat's owner (Human model)
     home = serializers.SerializerMethodField('get_cat_home')

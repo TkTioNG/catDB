@@ -69,7 +69,8 @@ class Human(models.Model):
     """
     name = models.CharField(max_length=30)
     gender = models.CharField(
-        max_length=1, choices=Gender.choices, default=Gender.OTHER)
+        max_length=1, choices=Gender.choices, default=Gender.OTHER
+    )
     date_of_birth = models.DateField(validators=[date_in_past])
     description = models.CharField(max_length=300, blank=True)
     home = models.ForeignKey('Home', on_delete=models.CASCADE)
