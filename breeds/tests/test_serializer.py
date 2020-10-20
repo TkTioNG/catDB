@@ -27,15 +27,28 @@ class HomeSerializerTests(TestCase):
 
     def setUp(self):
         self.data = factory.build(dict, FACTORY_CLASS=HomeFactory)
+        self.invalid_data = {
+            'name': "*" * 31,
+            'address': "*" * 301,
+            'hometype': "unknown",
+        }
         self.context = {
             'request': make_request(),
         }
 
-    def obtain_expected_result(self, data, obj, cats=None):
+    def obtain_expected_result(self, data, obj):
         # convert id into hyperlink
         data['url'] = convert_id_to_hyperlink(self.detail_url, obj)
-
         return data
+    
+    def get_required_fields(self, data:dict):
+        # return required fields for comparing purpose
+        # id or pk will be checked through the hyperlink format
+        return {
+            'name': data['name'],
+            'address': data['address'],
+            'hometype': data['hometype'],
+        }
 
     def test_contains_expected_fields(self):
         serializer = self.serializer_class(
@@ -44,9 +57,8 @@ class HomeSerializerTests(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
-        data = serializer.data
         self.assertEqual(
-            set(data.keys()),
+            set(serializer.data.keys()),
             set(['url', 'name', 'address', 'hometype']),
         )
 
@@ -59,21 +71,17 @@ class HomeSerializerTests(TestCase):
         home_obj = serializer.save()
         expected_data = self.obtain_expected_result(self.data, home_obj)
         self.assertDictEqual(serializer.data, expected_data)
-
-    def test_add_home_obj_with_cats_obj(self):
-        # add related cats objects to the home object
+        
+    def test_add_home_obj_with_invalid_data(self):        
         serializer = self.serializer_class(
-            data=self.data,
+            data=self.invalid_data,
             context=self.context
         )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        home_obj = serializer.save()
-        # Created related cats objects
-        cats = CatFactory.create_batch(100, home=home_obj)
-        expected_data = self.obtain_expected_result(
-            self.data, home_obj, cats=cats
+        self.assertFalse(serializer.is_valid())
+        self.assertSetEqual(
+            set(serializer.errors.keys()),
+            set({'name', 'address', 'hometype'})
         )
-        self.assertDictEqual(serializer.data, expected_data)
 
     def test_modify_home_obj(self):
         home_obj = HomeFactory.create()
@@ -81,14 +89,13 @@ class HomeSerializerTests(TestCase):
             instance=home_obj,
             context=self.context
         )
+        # Create new data that is not same as the original data
         modified_data = factory.build(dict, FACTORY_CLASS=HomeFactory)
         self.assertNotEqual(
-            {
-                'name': serializer.data['name'],
-                'origin': serializer.data['origin'],
-                'description': serializer.data['description'],
-            }, modified_data
+            self.get_required_fields(serializer.data),
+            modified_data
         )
+        # Updating the instance
         serializer = self.serializer_class(
             instance=home_obj,
             data=modified_data,
@@ -96,54 +103,43 @@ class HomeSerializerTests(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
-        # To check that it is the same instance
+        # To check that it is the same instance through hyperlink
         self.assertEqual(
             serializer.data['url'],
             convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL, home_obj)
         )
         # To check if the objects is modified
         self.assertEqual(
-            {
-                'name': serializer.data['name'],
-                'origin': serializer.data['origin'],
-                'description': serializer.data['description'],
-            }, modified_data
+            self.get_required_fields(serializer.data),
+            modified_data
         )
+        
+    def test_modify_home_obj_with_invalid_data(self):
+        pass
 
     def test_retrieve_home_objs(self):
         # Create multiple homes object to retrieve
         home_objs = HomeFactory.create_batch(10)
         for home_obj in home_objs:
             # Retrieve each object one by one
-            # Create cat objects to the home objects
-            cats = CatFactory.create_batch(3, home=home_obj)
             serializer = self.serializer_class(
                 instance=home_obj,
                 context=self.context
             )
-            self.data = {
+            # To check that it is the same instance
+            self.assertEqual(
+                serializer.data['url'],
+                convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL, home_obj)
+            )
+            data = {
                 'name': home_obj.name,
-                'origin': home_obj.origin,
-                'description': home_obj.description,
-            }
-            expected_data = self.obtain_expected_result(
-                self.data, home_obj, cats=cats
-            )
-            # Compare cats reverse relationship using set
-            self.assertSetEqual(
-                set(serializer.data['cats']), set(expected_data['cats'])
-            )
-            # Compare related homes using set
-            self.assertSetEqual(
-                set(serializer.data['homes']), set(expected_data['homes'])
-            )
-            # Compare all other fields
-            self.assertDictEqual(
-                {
-                    'name': serializer.data['name'],
-                    'origin': serializer.data['origin'],
-                    'description': serializer.data['description'],
-                }, self.data
+                'address': home_obj.address,
+                'hometype': home_obj.hometype,
+            }            
+            # Compare all the fields
+            self.assertDictEqual(                
+                self.get_required_fields(serializer.data),
+                data
             )
      
 
@@ -189,6 +185,15 @@ class BreedSerializerTests(TestCase):
             data['homes'] = []
 
         return data
+    
+    def get_required_fields(self, data:dict):
+        # return required fields for comparing purpose
+        # id or pk will be checked through the hyperlink format
+        return {
+            'name': data['name'],
+            'origin': data['origin'],
+            'description': data['description'],
+        }
 
     def test_contains_expected_fields(self):
         serializer = self.serializer_class(
@@ -236,11 +241,8 @@ class BreedSerializerTests(TestCase):
         )
         modified_data = factory.build(dict, FACTORY_CLASS=BreedFactory)
         self.assertNotEqual(
-            {
-                'name': serializer.data['name'],
-                'origin': serializer.data['origin'],
-                'description': serializer.data['description'],
-            }, modified_data
+            self.get_required_fields(serializer.data), 
+            modified_data
         )
         serializer = self.serializer_class(
             instance=breed_obj,
@@ -256,11 +258,8 @@ class BreedSerializerTests(TestCase):
         )
         # To check if the objects is modified
         self.assertEqual(
-            {
-                'name': serializer.data['name'],
-                'origin': serializer.data['origin'],
-                'description': serializer.data['description'],
-            }, modified_data
+            self.get_required_fields(serializer.data), 
+            modified_data
         )
 
     def test_retrieve_breed_objs(self):
@@ -292,10 +291,7 @@ class BreedSerializerTests(TestCase):
             )
             # Compare all other fields
             self.assertDictEqual(
-                {
-                    'name': serializer.data['name'],
-                    'origin': serializer.data['origin'],
-                    'description': serializer.data['description'],
-                }, self.data
+                self.get_required_fields(serializer.data), 
+                self.data
             )
             

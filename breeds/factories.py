@@ -28,7 +28,7 @@ class BreedFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: "Breed %d" % n)
     origin = factory.Faker('country')
-    description = factory.Faker('text')
+    description = factory.Faker('text', max_nb_chars=300)
 
     @classmethod
     def _setup_next_sequence(cls):
@@ -49,7 +49,7 @@ class HumanFactory(factory.django.DjangoModelFactory):
                                   date_start=datetime.date(1990, 1, 1),
                                   date_end=datetime.date(2010, 10, 18),
                                   )
-    description = factory.Faker('text')
+    description = factory.Faker('text', max_nb_chars=300)
     home = factory.SubFactory(HomeFactory)
 
 
@@ -64,6 +64,6 @@ class CatFactory(factory.django.DjangoModelFactory):
                                   date_start=datetime.date(2008, 1, 1),
                                   date_end=datetime.date(2020, 5, 31),
                                   )
-    description = factory.Faker('text')
+    description = factory.Faker('text', max_nb_chars=300)
     breed = factory.SubFactory(BreedFactory)
     owner = factory.SubFactory(HumanFactory)
