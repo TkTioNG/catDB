@@ -32,7 +32,7 @@ Moreover, the project can be launched by the following procedures:
 > python manage.py runserver
 ```
 
-3. By default, the project can be accessed through the url link: [http://localhost:8000].
+3. By default, the project can be accessed through the url link: http://localhost:8000.
 
 ### API Endpoints
 Below are a few API endpoint that can be accessed:
@@ -50,7 +50,7 @@ Below are a few API endpoint that can be accessed:
 }
 ```
 
-2. API Token Auth [http://localhost:8000/breeds/api-token-auth/]
+1. API Token Auth (http://localhost:8000/breeds/api-token-auth/)
    The endpoint that allow the registered user to obtain or renew their tokens. In this endpoint, only `POST` method is allowed by providing `username` and `password` for authentication purpose.
    A token will be provided in json format as below:
 
