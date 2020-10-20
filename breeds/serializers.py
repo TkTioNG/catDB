@@ -28,7 +28,7 @@ class BreedSerializer(serializers.HyperlinkedModelSerializer):
             'owner', flat=True).distinct()
         # Retrieving all unique home among the owners
         homes = set(Home.objects.filter(
-            human__id__in=all_owners).values_list('id', flat=True))
+            human__id__in=all_owners).order_by('-id').values_list('id', flat=True))
         # Convert the retrieved home ids into hyperlinks
         result = [
             reverse('breeds:home-detail',
