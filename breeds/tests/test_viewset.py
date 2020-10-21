@@ -53,10 +53,29 @@ def get_invalid_token_key():
     return get_token_key_header(invalid_token_key)
 
 # TODO: Add negative test case
+
+
 class BaseTestCase(APITestCase):
     '''
     Base Test Case Template that provide `add (POST)`, `remove (DELETE)`, 
     `modify (PUT)`, `partial modify (PATCH)`, `retrieve (GET)` function.
+
+
+    Test Case Code Format: #T$$-X00
+
+    Where
+    =====
+        $$: BV - Breed ViewSet Test Cases
+            CV - Cat ViewSet Test Cases
+            HV - Home ViewSet Test Cases
+            PV - Human ViewSet Test Cases
+
+        X:  A - Add (POST)
+            M - Modify (PUT)
+            P - Partial Modify (PATCH)
+            D - Remove (DELETE)
+            R - Retrieve (GET)
+
     '''
 
     def login_with_token(self, token):
@@ -96,9 +115,18 @@ class BaseTestCase(APITestCase):
         abstract = True
 
 
-class HomeViewSetTests(BaseTestCase):
-    # Test Case Code Format; #THV-000
-    # Current Test Case Sequence: THV-017
+class HomeViewSetBaseTests(BaseTestCase):
+    '''
+    Test Case Code Format: #THV-X00
+
+    Where
+    =====            
+        X:  A - Add (POST)
+            M - Modify (PUT)
+            P - Partial Modify (PATCH)
+            D - Delete (DELETE)
+            R - Retrieve (GET)
+    '''
 
     # initialise before each test case
     def setUp(self):
@@ -111,8 +139,15 @@ class HomeViewSetTests(BaseTestCase):
     def create_home_obj(self):
         return HomeFactory.create(**self.data)
 
-    # Test cases for adding a new home object
-    # Test Case: #THV-001
+
+class HomeViewSetAddTests(HomeViewSetBaseTests):
+    '''
+    Test Case Code Format: #THV-A00
+
+    Test cases for adding a new home object
+    '''
+
+    # Test Case: #THV-A01
     def test_add_home_obj_with_valid_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -121,10 +156,10 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_201_CREATED,
-            "#THV-001: Add home object with valid token failed"
+            "#THV-A01: Add home object with valid token failed"
         )
 
-    # Test Case: #THV-002
+    # Test Case: #THV-A02
     def test_add_home_obj_with_expired_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -133,10 +168,10 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-002: Able to add home object with expired token"
+            "#THV-A02: Able to add home object with expired token"
         )
 
-    # Test Case: #THV-003
+    # Test Case: #THV-A03
     def test_add_home_obj_with_invalid_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -145,10 +180,10 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-003: Able to add home object with invalid token"
+            "#THV-A03: Able to add home object with invalid token"
         )
 
-    # Test Case: #THV-004
+    # Test Case: #THV-A04
     def test_add_home_obj_without_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -156,11 +191,18 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-004: Able to add home object without token"
+            "#THV-A04: Able to add home object without token"
         )
 
-    # test cases for removing an existing home object
-    # Test Case: #THV-005
+
+class HomeViewSetDeleteTests(HomeViewSetBaseTests):
+    '''
+    Test Case Code Format: #THV-D00
+
+    Test cases for deleting an existing home object
+    '''
+
+    # Test Case: #THV-D01
     def test_remove_home_obj_with_valid_token(self):
         home_obj = self.create_home_obj()
         # attempt to remove the home_obj created
@@ -172,10 +214,10 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_204_NO_CONTENT,
-            "#THV-005: Remove home object with valid token failed"
+            "#THV-D01: Remove home object with valid token failed"
         )
 
-    # Test Case: #THV-006
+    # Test Case: #THV-D02
     def test_remove_home_obj_with_expired_token(self):
         home_obj = self.create_home_obj()
         response = self.remove_obj(
@@ -186,10 +228,10 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-006: Able to remove home object with expired token"
+            "#THV-D02: Able to remove home object with expired token"
         )
 
-    # Test Case: #THV-007
+    # Test Case: #THV-D03
     def test_remove_home_obj_with_invalid_token(self):
         home_obj = self.create_home_obj()
         response = self.remove_obj(
@@ -200,10 +242,10 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-007: Able to remove home object with invalid token"
+            "#THV-D03: Able to remove home object with invalid token"
         )
 
-    # Test Case: #THV-008
+    # Test Case: #THV-D04
     def test_remove_home_obj_without_token(self):
         home_obj = self.create_home_obj()
         response = self.remove_obj(
@@ -213,11 +255,18 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-008: Able to remove home object without token"
+            "#THV-D04: Able to remove home object without token"
         )
 
-    # test cases for modifying (put) an existing home object
-    # Test Case: #THV-009
+
+class HomeViewSetModifyTests(HomeViewSetBaseTests):
+    '''
+    Test Case Code Format: #THV-M00
+
+    Test cases for modifying (put) an existing home object
+    '''
+
+    # Test Case: #THV-M01
     def test_modify_home_obj_with_valid_token(self):
         home_obj = self.create_home_obj()
         response = self.modify_obj(
@@ -228,7 +277,7 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#THV-009: Modify home object with valid token failed"
+            "#THV-M01: Modify home object with valid token failed"
         )
         # Convert http response to json for comparing purpose
         json_data = response.json()
@@ -239,10 +288,10 @@ class HomeViewSetTests(BaseTestCase):
         }
         self.assertEqual(
             modified_data, self.new_data,
-            "#THV-009: Home object was not modified with valid token"
+            "#THV-M01: Home object was not modified with valid token"
         )
 
-    # Test Case: #THV-010
+    # Test Case: #THV-M02
     def test_modify_home_obj_with_expired_token(self):
         home_obj = self.create_home_obj()
         response = self.modify_obj(
@@ -253,10 +302,10 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-010: Able to modify home object with expired token"
+            "#THV-M02: Able to modify home object with expired token"
         )
 
-    # Test Case: #THV-011
+    # Test Case: #THV-M03
     def test_modify_home_obj_with_invalid_token(self):
         home_obj = self.create_home_obj()
         response = self.modify_obj(
@@ -267,10 +316,10 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-011: Able to modify home object with invalid token"
+            "#THV-M03: Able to modify home object with invalid token"
         )
 
-    # Test Case: #THV-012
+    # Test Case: #THV-M04
     def test_modify_home_obj_without_token(self):
         home_obj = self.create_home_obj()
         response = self.modify_obj(
@@ -280,12 +329,19 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-012: Able to modify home object without token"
+            "#THV-M04: Able to modify home object without token"
         )
 
-    # test cases for partially modifying (patch request) an
-    # existing home object
-    # Test Case: #THV-013
+
+class HomeViewSetPartialModifyTests(HomeViewSetBaseTests):
+    '''
+    Test Case Code Format: #THV-P00
+
+    Test cases for partially modifying (patch request) an
+    existing home object
+    '''
+
+    # Test Case: #THV-P01
     def test_partial_modify_home_obj_with_valid_token(self):
         home_obj = self.create_home_obj()
         self.data['name'] = "modify test name"  # modifying name only
@@ -297,7 +353,7 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#THV-013: partial_modify Home object with valid token failed"
+            "#THV-P01: partial_modify Home object with valid token failed"
         )
         json_data = response.json()
         modified_data = {
@@ -307,10 +363,10 @@ class HomeViewSetTests(BaseTestCase):
         }
         self.assertEqual(
             modified_data, self.data,
-            "#THV-013: Home object was not partially modified with valid token"
+            "#THV-P01: Home object was not partially modified with valid token"
         )
 
-    # Test Case: #THV-014
+    # Test Case: #THV-P02
     def test_partial_modify_home_obj_with_expired_token(self):
         home_obj = self.create_home_obj()
         self.data['name'] = "modify test name"
@@ -322,10 +378,10 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-014: Able to partial_modify home object with expired token"
+            "#THV-P02: Able to partial_modify home object with expired token"
         )
 
-    # Test Case: #THV-015
+    # Test Case: #THV-P03
     def test_partial_modify_home_obj_with_invalid_token(self):
         home_obj = self.create_home_obj()
         self.data['name'] = "modify test name"
@@ -337,10 +393,10 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-015: Able to partial_modify home object with invalid token"
+            "#THV-P03: Able to partial_modify home object with invalid token"
         )
 
-    # Test Case: #THV-016
+    # Test Case: #THV-P04
     def test_partial_modify_home_obj_without_token(self):
         home_obj = self.create_home_obj()
         self.data['name'] = "modify test name"
@@ -351,11 +407,18 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#THV-016: Able to partial_modify home object without token"
+            "#THV-P04: Able to partial_modify home object without token"
         )
 
-    # test cases for retrieving an existing home object
-    # Test Case: #THV-017
+
+class HomeViewSetRetrieveTests(HomeViewSetBaseTests):
+    '''
+    Test Case Code Format: #THV-R00
+
+    Test cases for retrieving an existing home object
+    '''
+
+    # Test Case: #THV-R01
     def test_retrieve_home_obj_with_valid_token(self):
         home_obj = self.create_home_obj()
         response = self.retrieve_obj(
@@ -365,7 +428,7 @@ class HomeViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#THV-017: Retrieve one home object failed"
+            "#THV-R01: Retrieve one home object failed"
         )
         # Convert http response to json for comparing purpose
         json_data = response.json()
@@ -376,13 +439,22 @@ class HomeViewSetTests(BaseTestCase):
         }
         self.assertEqual(
             retrieved_data, self.data,
-            "#THV-017: Retrieve data is not same as the posted data"
+            "#THV-R01: Retrieve data is not same as the posted data"
         )
 
 
-class BreedViewSetTests(BaseTestCase):
-    # Test Case Code Format; #TBV-000
-    # Current Test Case Sequence: TBV-017
+class BreedViewSetBaseTests(BaseTestCase):
+    '''
+    Test Case Code Format: #TBV-X00
+
+    Where
+    =====            
+        X:  A - Add (POST)
+            M - Modify (PUT)
+            P - Partial Modify (PATCH)
+            D - Delete (DELETE)
+            R - Retrieve (GET)
+    '''
 
     # initialise before each test case
     def setUp(self):
@@ -395,8 +467,15 @@ class BreedViewSetTests(BaseTestCase):
     def create_breed_obj(self):
         return BreedFactory.create(**self.data)
 
-    # Test cases for adding a new breed object
-    # Test Case: #TBV-001
+
+class BreedViewSetAddTests(BreedViewSetBaseTests):
+    '''
+    Test Case Code Format: #TBV-A00
+
+    Test cases for adding a new breed object
+    '''
+    # Test Case: #TBV-A01
+
     def test_add_breed_obj_with_valid_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -405,10 +484,10 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_201_CREATED,
-            "#TBV-001: Add breed object with valid token failed"
+            "#TBV-A01: Add breed object with valid token failed"
         )
 
-    # Test Case: #TBV-002
+    # Test Case: #TBV-A02
     def test_add_breed_obj_with_expired_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -417,10 +496,10 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-002: Add breed object with expired token failed"
+            "#TBV-A02: Add breed object with expired token failed"
         )
 
-    # Test Case: #TBV-003
+    # Test Case: #TBV-A03
     def test_add_breed_obj_with_invalid_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -429,10 +508,10 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-003: Able to add breed object with invalid token"
+            "#TBV-A03: Able to add breed object with invalid token"
         )
 
-    # Test Case: #TBV-004
+    # Test Case: #TBV-A04
     def test_add_breed_obj_without_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -440,11 +519,18 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-004: Able to add breed object without token"
+            "#TBV-A04: Able to add breed object without token"
         )
 
-    # test cases for removing an existing breed object
-    # Test Case: #TBV-005
+
+class BreedViewSetDeleteTests(BreedViewSetBaseTests):
+    '''
+    Test Case Code Format: #TBV-D00
+
+    Test cases for removing an existing breed object
+    '''
+
+    # Test Case: #TBV-D01
     def test_remove_breed_obj_with_valid_token(self):
         breed_obj = self.create_breed_obj()
         response = self.remove_obj(
@@ -455,10 +541,10 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_204_NO_CONTENT,
-            "#TBV-005: Remove breed object with valid token failed"
+            "#TBV-D01: Remove breed object with valid token failed"
         )
 
-    # Test Case: #TBV-006
+    # Test Case: #TBV-D02
     def test_remove_breed_obj_with_expired_token(self):
         breed_obj = self.create_breed_obj()
         response = self.remove_obj(
@@ -469,10 +555,10 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-006: Able to remove breed object with invalid token"
+            "#TBV-D02: Able to remove breed object with invalid token"
         )
 
-    # Test Case: #TBV-007
+    # Test Case: #TBV-D03
     def test_remove_breed_obj_with_invalid_token(self):
         breed_obj = self.create_breed_obj()
         response = self.remove_obj(
@@ -483,10 +569,10 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-007: Able to remove breed object with invalid token"
+            "#TBV-D03: Able to remove breed object with invalid token"
         )
 
-    # Test Case: #TBV-008
+    # Test Case: #TBV-D04
     def test_remove_breed_obj_without_token(self):
         breed_obj = self.create_breed_obj()
         response = self.remove_obj(
@@ -496,11 +582,18 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-008: Able to remove breed object without token"
+            "#TBV-D04: Able to remove breed object without token"
         )
 
-    # test cases for modifying (put) an existing breed object
-    # Test Case: #TBV-009
+
+class BreedViewSetModifyTests(BreedViewSetBaseTests):
+    '''
+    Test Case Code Format: #TBV-M00
+
+    Test cases for modifying (put) an existing breed object
+    '''
+
+    # Test Case: #TBV-M01
     def test_modify_breed_obj_with_valid_token(self):
         breed_obj = self.create_breed_obj()
         response = self.modify_obj(
@@ -511,7 +604,7 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#TBV-009: Modify breed object with valid token failed"
+            "#TBV-M01: Modify breed object with valid token failed"
         )
         json_data = response.json()
         modified_data = {
@@ -521,10 +614,10 @@ class BreedViewSetTests(BaseTestCase):
         }
         self.assertEqual(
             modified_data, self.new_data,
-            "#TBV-009: Breed object was not modified with valid token"
+            "#TBV-M01: Breed object was not modified with valid token"
         )
 
-    # Test Case: #TBV-010
+    # Test Case: #TBV-M02
     def test_modify_breed_obj_with_expired_token(self):
         breed_obj = self.create_breed_obj()
         response = self.modify_obj(
@@ -535,10 +628,10 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-010: Able to modify breed object with invalid token"
+            "#TBV-M02: Able to modify breed object with invalid token"
         )
 
-    # Test Case: #TBV-011
+    # Test Case: #TBV-M03
     def test_modify_breed_obj_with_invalid_token(self):
         breed_obj = self.create_breed_obj()
         response = self.modify_obj(
@@ -549,10 +642,10 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-011: Able to modify breed object with invalid token"
+            "#TBV-M03: Able to modify breed object with invalid token"
         )
 
-    # Test Case: #TBV-012
+    # Test Case: #TBV-M04
     def test_modify_breed_obj_without_token(self):
         breed_obj = self.create_breed_obj()
         response = self.modify_obj(
@@ -562,12 +655,19 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-012: Able to modify breed object without token"
+            "#TBV-M04: Able to modify breed object without token"
         )
 
-    # test cases for partially modifying (patch request) an
-    # existing breed object
-    # Test Case: #TBV-013
+
+class BreedViewSetPartialModifyTests(BreedViewSetBaseTests):
+    '''
+    Test Case Code Format: #TBV-P00
+
+    Test cases for partially modifying (patch request) an
+    existing breed object
+    '''
+
+    # Test Case: #TBV-P01
     def test_partial_modify_breed_obj_with_valid_token(self):
         breed_obj = self.create_breed_obj()
         self.data['name'] = "modify test name"
@@ -579,7 +679,7 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#TBV-013: partial_modify breed object with valid token failed"
+            "#TBV-P01: partial_modify breed object with valid token failed"
         )
         # Convert http response to json for comparing purpose
         json_data = response.json()
@@ -590,10 +690,10 @@ class BreedViewSetTests(BaseTestCase):
         }
         self.assertEqual(
             modified_data, self.data,
-            "#TBV-013: Breed object was not partially modified with valid token"
+            "#TBV-P01: Breed object was not partially modified with valid token"
         )
 
-    # Test Case: #TBV-014
+    # Test Case: #TBV-P02
     def test_partial_modify_breed_obj_with_expired_token(self):
         breed_obj = self.create_breed_obj()
         self.data['name'] = "modify test name"
@@ -605,10 +705,10 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-014: Able to partial_modify breed object with invalid token"
+            "#TBV-P02: Able to partial_modify breed object with invalid token"
         )
 
-    # Test Case: #TBV-015
+    # Test Case: #TBV-P03
     def test_partial_modify_breed_obj_with_invalid_token(self):
         breed_obj = self.create_breed_obj()
         self.data['name'] = "modify test name"
@@ -620,10 +720,10 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-015: Able to partial_modify breed object with invalid token"
+            "#TBV-P03: Able to partial_modify breed object with invalid token"
         )
 
-    # Test Case: #TBV-016
+    # Test Case: #TBV-P04
     def test_partial_modify_breed_obj_without_token(self):
         breed_obj = self.create_breed_obj()
         self.data['name'] = "modify test name"
@@ -634,11 +734,18 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TBV-016: Able to partial_modify breed object without token"
+            "#TBV-P04: Able to partial_modify breed object without token"
         )
 
-    # test cases for retrieving an existing breed object
-    # Test Case: #TBV-017
+
+class BreedViewSetRetrieveTests(BreedViewSetBaseTests):
+    '''
+    Test Case Code Format: #TBV-R00
+
+    Test cases for retrieving an existing breed object
+    '''
+
+    # Test Case: #TBV-R01
     def test_retrieve_breed_obj_with_valid_token(self):
         breed_obj = self.create_breed_obj()
         response = self.retrieve_obj(
@@ -648,7 +755,7 @@ class BreedViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#TBV-017: Retrieve one breed object failed"
+            "#TBV-R01: Retrieve one breed object failed"
         )
         # Convert http response to json for comparing purpose
         json_data = response.json()
@@ -659,13 +766,22 @@ class BreedViewSetTests(BaseTestCase):
         }
         self.assertEqual(
             retrieved_data, self.data,
-            "#TBV-017: Retrieve data is not same as the posted data"
+            "#TBV-R01: Retrieve data is not same as the posted data"
         )
 
 
-class HumanViewSetTests(BaseTestCase):
-    # Test Case Code Format; #TPV-000
-    # Current Test Case Sequence: TPV-017
+class HumanViewSetBaseTests(BaseTestCase):
+    '''
+    Test Case Code Format: #TPV-X00
+
+    Where
+    =====            
+        X:  A - Add (POST)
+            M - Modify (PUT)
+            P - Partial Modify (PATCH)
+            D - Delete (DELETE)
+            R - Retrieve (GET)
+    '''
 
     # initialise before each test case
     def setUp(self):
@@ -692,8 +808,15 @@ class HumanViewSetTests(BaseTestCase):
     def create_human_obj(self):
         return HumanFactory.create()
 
-    # Test cases for adding a new human object
-    # Test Case: #TPV-001
+
+class HumanViewSetAddTests(HumanViewSetBaseTests):
+    '''
+    Test Case Code Format: #TPV-A00
+
+    Test cases for adding a new human object
+    '''
+
+    # Test Case: #TPV-A01
     def test_add_human_obj_with_valid_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -702,10 +825,10 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_201_CREATED,
-            "#TPV-001: Add human object with valid token failed"
+            "#TPV-A01: Add human object with valid token failed"
         )
 
-    # Test Case: #TPV-002
+    # Test Case: #TPV-A02
     def test_add_human_obj_with_expired_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -714,10 +837,10 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-002: Able to add human object with expired token"
+            "#TPV-A02: Able to add human object with expired token"
         )
 
-    # Test Case: #TPV-003
+    # Test Case: #TPV-A03
     def test_add_human_obj_with_invalid_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -726,10 +849,10 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-003: Able to add human object with invalid token"
+            "#TPV-A03: Able to add human object with invalid token"
         )
 
-    # Test Case: #TPV-004
+    # Test Case: #TPV-A04
     def test_add_human_obj_without_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -737,11 +860,18 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-004: Able to add human object without token"
+            "#TPV-A04: Able to add human object without token"
         )
 
-    # test cases for removing an existing human object
-    # Test Case: #TPV-005
+
+class HumanViewSetDeleteTests(HumanViewSetBaseTests):
+    '''
+    Test Case Code Format: #TPV-D00
+
+    Test cases for removing an existing human object
+    '''
+
+    # Test Case: #TPV-D01
     def test_remove_human_obj_with_valid_token(self):
         human_obj = self.create_human_obj()
         response = self.remove_obj(
@@ -752,10 +882,10 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_204_NO_CONTENT,
-            "#TPV-005: Remove human object with valid token failed"
+            "#TPV-D01: Remove human object with valid token failed"
         )
 
-    # Test Case: #TPV-006
+    # Test Case: #TPV-D02
     def test_remove_human_obj_with_expired_token(self):
         human_obj = self.create_human_obj()
         response = self.remove_obj(
@@ -766,10 +896,10 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-006: Able to remove human object with expired token"
+            "#TPV-D02: Able to remove human object with expired token"
         )
 
-    # Test Case: #TPV-007
+    # Test Case: #TPV-D03
     def test_remove_human_obj_with_invalid_token(self):
         human_obj = self.create_human_obj()
         response = self.remove_obj(
@@ -780,10 +910,10 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-007: Able to remove human object with invalid token"
+            "#TPV-D03: Able to remove human object with invalid token"
         )
 
-    # Test Case: #TPV-008
+    # Test Case: #TPV-D04
     def test_remove_human_obj_without_token(self):
         human_obj = self.create_human_obj()
         response = self.remove_obj(
@@ -793,11 +923,18 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-008: Able to remove human object without token"
+            "#TPV-D04: Able to remove human object without token"
         )
 
-    # test cases for modifying (put) an existing human object
-    # Test Case: #TPV-009
+
+class HumanViewSetModifyTests(HumanViewSetBaseTests):
+    '''
+    Test Case Code Format: #TPV-M00
+
+    Test cases for modifying (put) an existing human object
+    '''
+
+    # Test Case: #TPV-M01
     def test_modify_human_obj_with_valid_token(self):
         human_obj = self.create_human_obj()
         response = self.modify_obj(
@@ -808,7 +945,7 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#TPV-009: Modify human object with valid token failed"
+            "#TPV-M01: Modify human object with valid token failed"
         )
         # convert http response into json for comparing purpose
         json_data = response.json()
@@ -821,10 +958,10 @@ class HumanViewSetTests(BaseTestCase):
         }
         self.assertEqual(
             modified_data, self.new_data,
-            "#TPV-009: Human object was not modified with valid token"
+            "#TPV-M01: Human object was not modified with valid token"
         )
 
-    # Test Case: #TPV-010
+    # Test Case: #TPV-M02
     def test_modify_human_obj_with_expired_token(self):
         human_obj = self.create_human_obj()
         response = self.modify_obj(
@@ -835,10 +972,10 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-010: Able to modify human object with expired token"
+            "#TPV-M02: Able to modify human object with expired token"
         )
 
-    # Test Case: #TPV-011
+    # Test Case: #TPV-M03
     def test_modify_human_obj_with_invalid_token(self):
         human_obj = self.create_human_obj()
         response = self.modify_obj(
@@ -849,10 +986,10 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-011: Able to modify human object with invalid token"
+            "#TPV-M03: Able to modify human object with invalid token"
         )
 
-    # Test Case: #TPV-012
+    # Test Case: #TPV-M04
     def test_modify_human_obj_without_token(self):
         human_obj = self.create_human_obj()
         response = self.modify_obj(
@@ -862,12 +999,19 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-012: Able to modify human object without token"
+            "#TPV-M04: Able to modify human object without token"
         )
 
-    # test cases for partially modifying (patch request) an
-    # existing human object
-    # Test Case: #TPV-013
+
+class HumanViewSetPartialModifyTests(HumanViewSetBaseTests):
+    '''
+    Test Case Code Format: #TPV-P00
+
+    Test cases for partially modifying (patch request) an
+    existing human object
+    '''
+
+    # Test Case: #TPV-P01
     def test_partial_modify_human_obj_with_valid_token(self):
         human_obj = self.create_human_obj()
         self.data['name'] = "modify test name"
@@ -879,7 +1023,7 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#TPV-013: partial_modify Human object with valid token failed"
+            "#TPV-P01: partial_modify Human object with valid token failed"
         )
         # convert http response into json for comparing purpose
         json_data = response.json()
@@ -892,10 +1036,10 @@ class HumanViewSetTests(BaseTestCase):
         }
         self.assertEqual(
             modified_data, self.data,
-            "#TPV-013: Human object was not partially modified with valid token"
+            "#TPV-P01: Human object was not partially modified with valid token"
         )
 
-    # Test Case: #TPV-014
+    # Test Case: #TPV-P02
     def test_partial_modify_human_obj_with_expired_token(self):
         human_obj = self.create_human_obj()
         self.data['name'] = "modify test name"
@@ -907,10 +1051,10 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-014: Able to partial_modify human object with expired token"
+            "#TPV-P02: Able to partial_modify human object with expired token"
         )
 
-    # Test Case: #TPV-015
+    # Test Case: #TPV-P03
     def test_partial_modify_human_obj_with_invalid_token(self):
         human_obj = self.create_human_obj()
         self.data['name'] = "modify test name"
@@ -922,10 +1066,10 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-015: Able to partial_modify human object with invalid token"
+            "#TPV-P03: Able to partial_modify human object with invalid token"
         )
 
-    # Test Case: #TPV-016
+    # Test Case: #TPV-P04
     def test_partial_modify_human_obj_without_token(self):
         human_obj = self.create_human_obj()
         self.data['name'] = "modify test name"
@@ -936,11 +1080,18 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TPV-016: Able to partial_modify human object without token"
+            "#TPV-P04: Able to partial_modify human object without token"
         )
 
-    # test cases for retrieving an existing human object
-    # Test Case: #TPV-017
+
+class HumanViewSetRetrieveTests(HumanViewSetBaseTests):
+    '''
+    Test Case Code Format: #TPV-R00
+
+    Test cases for retrieving an existing human object
+    '''
+
+    # Test Case: #TPV-R01
     def test_retrieve_human_obj_with_valid_token(self):
         human_obj = self.create_human_obj()
         response = self.retrieve_obj(
@@ -949,7 +1100,7 @@ class HumanViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#TPV-017: Retrieve one human object failed"
+            "#TPV-R01: Retrieve one human object failed"
         )
         # convert http response into json for comparing purpose
         json_data = response.json()
@@ -973,13 +1124,22 @@ class HumanViewSetTests(BaseTestCase):
         self.parse_obj(human_obj)
         self.assertEqual(
             retrieved_data, human_obj,
-            "#TPV-017: Retrieve data is not same as the posted data"
+            "#TPV-R01: Retrieve data is not same as the posted data"
         )
 
 
-class CatViewSetTests(BaseTestCase):
-    # Test Case Code Format; #TCV-000
-    # Current Test Case Sequence: TCV-017
+class CatViewSetBaseTests(BaseTestCase):
+    '''
+    Test Case Code Format: #TCV-X00
+
+    Where
+    =====            
+        X:  A - Add (POST)
+            M - Modify (PUT)
+            P - Partial Modify (PATCH)
+            D - Delete (DELETE)
+            R - Retrieve (GET)
+    '''
 
     # initialise before each test case
     def setUp(self):
@@ -1001,17 +1161,24 @@ class CatViewSetTests(BaseTestCase):
         for d in dicts:
             # convert FKs to hyperlinks
             d['breed'] = 'http://testserver' \
-                        + reverse('breeds:breed-detail', args=[d['breed'].id])
+                + reverse('breeds:breed-detail', args=[d['breed'].id])
             d['owner'] = 'http://testserver' \
-                        + reverse('breeds:human-detail', args=[d['owner'].id])
+                + reverse('breeds:human-detail', args=[d['owner'].id])
             # convert datetime object into str, default format(yyyy-mm-dd)
             d['date_of_birth'] = str(d['date_of_birth'])
 
     def create_cat_obj(self):
         return CatFactory.create()
 
-    # Test cases for adding a new cat object
-    # Test Case: #TCV-001
+
+class CatViewSetAddTests(CatViewSetBaseTests):
+    '''
+    Test Case Code Format: #TCV-A00
+
+    Test cases for adding a new cat object
+    '''
+
+    # Test Case: #TCV-A01
     def test_add_cat_obj_with_valid_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -1020,10 +1187,10 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_201_CREATED,
-            "#TCV-001: Add cat object with valid token failed"
+            "#TCV-A01: Add cat object with valid token failed"
         )
 
-    # Test Case: #TCV-002
+    # Test Case: #TCV-A02
     def test_add_cat_obj_with_expired_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -1032,10 +1199,10 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-002: Able to add cat object with expired token"
+            "#TCV-A02: Able to add cat object with expired token"
         )
 
-    # Test Case: #TCV-003
+    # Test Case: #TCV-A03
     def test_add_cat_obj_with_invalid_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -1044,10 +1211,10 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-003: Able to add cat object with invalid token"
+            "#TCV-A03: Able to add cat object with invalid token"
         )
 
-    # Test Case: #TCV-004
+    # Test Case: #TCV-A04
     def test_add_cat_obj_without_token(self):
         response = self.add_obj(
             url=self.list_url,
@@ -1055,11 +1222,18 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-004: Able to add cat object without token"
+            "#TCV-A04: Able to add cat object without token"
         )
 
-    # test cases for removing an existing cat object
-    # Test Case: #TCV-005
+
+class CatViewSetDeleteTests(CatViewSetBaseTests):
+    '''
+    Test Case Code Format: #TCV-D00
+
+    Test cases for removing an existing cat object
+    '''
+
+    # Test Case: #TCV-D01
     def test_remove_cat_obj_with_valid_token(self):
         cat_obj = self.create_cat_obj()
         response = self.remove_obj(
@@ -1070,10 +1244,10 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_204_NO_CONTENT,
-            "#TCV-005: Remove cat object with valid token failed"
+            "#TCV-D01: Remove cat object with valid token failed"
         )
 
-    # Test Case: #TCV-006
+    # Test Case: #TCV-D02
     def test_remove_cat_obj_with_expired_token(self):
         cat_obj = self.create_cat_obj()
         response = self.remove_obj(
@@ -1084,10 +1258,10 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-006: Able to remove cat object with expired token"
+            "#TCV-D02: Able to remove cat object with expired token"
         )
 
-    # Test Case: #TCV-007
+    # Test Case: #TCV-D03
     def test_remove_cat_obj_with_invalid_token(self):
         cat_obj = self.create_cat_obj()
         response = self.remove_obj(
@@ -1098,10 +1272,10 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-007: Able to remove cat object with invalid token"
+            "#TCV-D03: Able to remove cat object with invalid token"
         )
 
-    # Test Case: #TCV-008
+    # Test Case: #TCV-D04
     def test_remove_cat_obj_without_token(self):
         cat_obj = self.create_cat_obj()
         response = self.remove_obj(
@@ -1111,11 +1285,18 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-008: Able to remove cat object without token"
+            "#TCV-D04: Able to remove cat object without token"
         )
 
-    # test cases for modifying (put) an existing cat object
-    # Test Case: #TCV-009
+
+class CatViewSetModifyTests(CatViewSetBaseTests):
+    '''
+    Test Case Code Format: #TCV-M00
+
+    Test cases for modifying (put) an existing cat object
+    '''
+
+    # Test Case: #TCV-M01
     def test_modify_cat_obj_with_valid_token(self):
         cat_obj = self.create_cat_obj()
         response = self.modify_obj(
@@ -1126,7 +1307,7 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#TCV-009: Modify cat object with valid token failed"
+            "#TCV-M01: Modify cat object with valid token failed"
         )
         # convert http response into json for comparing purpose
         json_data = response.json()
@@ -1140,10 +1321,10 @@ class CatViewSetTests(BaseTestCase):
         }
         self.assertEqual(
             modified_data, self.new_data,
-            "#TCV-009: Cat object was not modified with valid token"
+            "#TCV-M01: Cat object was not modified with valid token"
         )
 
-    # Test Case: #TCV-010
+    # Test Case: #TCV-M02
     def test_modify_cat_obj_with_expired_token(self):
         cat_obj = self.create_cat_obj()
         response = self.modify_obj(
@@ -1154,10 +1335,10 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-010: Able to modify cat object with expired token"
+            "#TCV-M02: Able to modify cat object with expired token"
         )
 
-    # Test Case: #TCV-011
+    # Test Case: #TCV-M03
     def test_modify_cat_obj_with_invalid_token(self):
         cat_obj = self.create_cat_obj()
         response = self.modify_obj(
@@ -1168,10 +1349,10 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-011: Able to modify cat object with invalid token"
+            "#TCV-M03: Able to modify cat object with invalid token"
         )
 
-    # Test Case: #TCV-012
+    # Test Case: #TCV-M04
     def test_modify_cat_obj_without_token(self):
         cat_obj = self.create_cat_obj()
         response = self.modify_obj(
@@ -1181,12 +1362,19 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-012: Able to modify cat object without token"
+            "#TCV-M04: Able to modify cat object without token"
         )
 
-    # test cases for partially modifying (patch request) an
-    # existing cat object
-    # Test Case: #TCV-013
+
+class CatViewSetPartialModifyTests(CatViewSetBaseTests):
+    '''
+    Test Case Code Format: #TCV-P00
+
+    Test cases for partially modifying (patch request) an
+    existing cat object
+    '''
+
+    # Test Case: #TCV-P01
     def test_partial_modify_cat_obj_with_valid_token(self):
         cat_obj = self.create_cat_obj()
         self.data['name'] = "modify test name"
@@ -1198,7 +1386,7 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#TCV-013: partial_modify Cat object with valid token failed"
+            "#TCV-P01: partial_modify Cat object with valid token failed"
         )
         # convert http response into json for comparing purpose
         json_data = response.json()
@@ -1212,10 +1400,10 @@ class CatViewSetTests(BaseTestCase):
         }
         self.assertEqual(
             modified_data, self.data,
-            "#TCV-013: Cat object was not partially modified with valid token"
+            "#TCV-P01: Cat object was not partially modified with valid token"
         )
 
-    # Test Case: #TCV-014
+    # Test Case: #TCV-P02
     def test_partial_modify_cat_obj_with_expired_token(self):
         cat_obj = self.create_cat_obj()
         self.data['name'] = "modify test name"
@@ -1227,10 +1415,10 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-014: Able to partial_modify cat object with expired token"
+            "#TCV-P02: Able to partial_modify cat object with expired token"
         )
 
-    # Test Case: #TCV-015
+    # Test Case: #TCV-P03
     def test_partial_modify_cat_obj_with_invalid_token(self):
         cat_obj = self.create_cat_obj()
         self.data['name'] = "modify test name"
@@ -1242,10 +1430,10 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-015: Able to partial_modify cat object with invalid token"
+            "#TCV-P03: Able to partial_modify cat object with invalid token"
         )
 
-    # Test Case: #TCV-016
+    # Test Case: #TCV-P04
     def test_partial_modify_cat_obj_without_token(self):
         cat_obj = self.create_cat_obj()
         self.data['name'] = "modify test name"
@@ -1256,11 +1444,18 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
-            "#TCV-016: Able to partial_modify cat object without token"
+            "#TCV-P04: Able to partial_modify cat object without token"
         )
 
-    # test cases for retrieving an existing cat object
-    # Test Case: #TCV-017
+
+class CatViewSetRetrieveTests(CatViewSetBaseTests):
+    '''
+    Test Case Code Format: #TCV-R00
+
+    Test cases for retrieving an existing cat object
+    '''
+
+    # Test Case: #TCV-R01
     def test_retrieve_cat_obj_with_valid_token(self):
         cat_obj = self.create_cat_obj()
         response = self.retrieve_obj(
@@ -1269,7 +1464,7 @@ class CatViewSetTests(BaseTestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#TCV-017: Retrieve one cat object failed"
+            "#TCV-R01: Retrieve one cat object failed"
         )
         # convert http response into json for comparing purpose
         json_data = response.json()
@@ -1295,5 +1490,5 @@ class CatViewSetTests(BaseTestCase):
         self.parse_obj(cat_obj)
         self.assertEqual(
             retrieved_data, cat_obj,
-            "#TCV-017: Retrieve data is not same as the posted data"
+            "#TCV-R01: Retrieve data is not same as the posted data"
         )
