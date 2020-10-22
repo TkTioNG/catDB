@@ -11,15 +11,11 @@ from breeds.factories import (
     BreedFactory, CatFactory, HomeFactory, HumanFactory
 )
 from breeds.models import Breed, Cat, Home, Human, Gender
-from .base import ViewName as vn
+from .base import convert_id_to_hyperlink, ViewName as vn
 
 
 def make_request():
     return APIRequestFactory().get('/')
-
-
-def convert_id_to_hyperlink(view_name, obj):
-    return "http://testserver" + reverse(view_name, args=[obj.id])
 
 
 class HomeSerializerTests(TestCase):
@@ -227,7 +223,7 @@ class HomeSerializerTests(TestCase):
             many=True,
             context=self.context
         )
-        # Check the length of the generated serailizer data
+        # Check the length of the generated serializer data
         self.assertEqual(len(serializer.data), 10)
         # Compare the data one by one
         for home_obj, serializer_data in zip(home_objs, serializer.data):
@@ -836,7 +832,7 @@ class CatSerializerTests(TestCase):
         data['gender'] = obj.gender
         data['date_of_birth'] = str(obj.date_of_birth)
         data['description'] = obj.description
-        # Convert related home id to hyperlink
+        # Convert related Breed, Human, Home id to hyperlink
         data['breed'] = convert_id_to_hyperlink(
             vn.BREED_VIEW_DETAIL, obj.breed
         )

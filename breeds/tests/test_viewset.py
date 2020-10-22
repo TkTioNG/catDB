@@ -1,6 +1,7 @@
 import string
 import random
 import factory
+import requests
 from datetime import timedelta
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -9,8 +10,11 @@ from rest_framework.test import APITestCase
 from rest_framework.reverse import reverse
 from rest_framework.authtoken.models import Token
 
+from breeds.models import Breed, Cat, Home, Human
 from breeds.factories import BreedFactory, CatFactory, HomeFactory, HumanFactory
 from breeds.authentication import EXPIRING_HOUR
+from .base import convert_id_to_hyperlink, ViewName as vn
+
 
 BASE_URL = "http://testserver"
 VALID_USERNAME = "Human 1"
@@ -39,8 +43,8 @@ def get_valid_token_key():
 def get_expired_token_key():
     expired_token = create_token()
     # Expiring the token manually
-    expired_token.created = timezone.now() - timedelta(hours=EXPIRING_HOUR,
-                                                       seconds=1)
+    expired_token.created = timezone.now() \
+        - timedelta(hours=EXPIRING_HOUR, seconds=1)
     expired_token.save()
     return get_token_key_header(expired_token.key)
 
@@ -51,6 +55,10 @@ def get_invalid_token_key():
         random.choices(string.ascii_lowercase + string.digits, k=40)
     )
     return get_token_key_header(invalid_token_key)
+
+
+def get_data_from_json(json_data, *args):
+    return {arg: json_data.get(arg, None) for arg in args}
 
 # TODO: Add negative test case
 
@@ -111,6 +119,11 @@ class BaseTestCase(APITestCase):
         response = self.client.get(reverse(url, args=[pk]), data=data)
         return response
 
+    def get_num_of_obj(self, list_view_name):
+        self.client.logout()
+        response = self.client.get(reverse(list_view_name))
+        return response.json()['count']
+
     class Meta:
         abstract = True
 
@@ -130,14 +143,20 @@ class HomeViewSetBaseTests(BaseTestCase):
 
     # initialise before each test case
     def setUp(self):
-        self.list_url = 'breeds:home-list'
-        self.detail_url = 'breeds:home-detail'
+        self.list_url = vn.HOME_VIEW_LIST
+        self.detail_url = vn.HOME_VIEW_DETAIL
         self.data = factory.build(dict, FACTORY_CLASS=HomeFactory)
         # used as modified data scheme
         self.new_data = factory.build(dict, FACTORY_CLASS=HomeFactory)
 
     def create_home_obj(self):
         return HomeFactory.create(**self.data)
+
+    def get_home_obj_url(self, data: dict):
+        # Add url (hyperlink) from the home object id to the dict object
+        home_obj = Home.objects.latest('pk')
+        data['url'] = convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL, home_obj)
+        return data
 
 
 class HomeViewSetAddTests(HomeViewSetBaseTests):
@@ -149,6 +168,7 @@ class HomeViewSetAddTests(HomeViewSetBaseTests):
 
     # Test Case: #THV-A01
     def test_add_home_obj_with_valid_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -158,9 +178,19 @@ class HomeViewSetAddTests(HomeViewSetBaseTests):
             response.status_code, status.HTTP_201_CREATED,
             "#THV-A01: Add home object with valid token failed"
         )
+        self.assertEqual(
+            response.json(), self.get_home_obj_url(self.data),
+            "#THV-A01: Add objects is not the same"
+        )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj + 1,
+            "#THV-A01: Home object is not added in the total count"
+        )
 
     # Test Case: #THV-A02
     def test_add_home_obj_with_expired_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -170,9 +200,15 @@ class HomeViewSetAddTests(HomeViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#THV-A02: Able to add home object with expired token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#THV-A02: Home object is accidentally added to total count"
+        )
 
     # Test Case: #THV-A03
     def test_add_home_obj_with_invalid_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -182,9 +218,15 @@ class HomeViewSetAddTests(HomeViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#THV-A03: Able to add home object with invalid token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#THV-A03: Home object is accidentally added to total count"
+        )
 
     # Test Case: #THV-A04
     def test_add_home_obj_without_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -192,6 +234,11 @@ class HomeViewSetAddTests(HomeViewSetBaseTests):
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#THV-A04: Able to add home object without token"
+        )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#THV-A04: Home object is accidentally added to total count"
         )
 
 
@@ -205,6 +252,7 @@ class HomeViewSetDeleteTests(HomeViewSetBaseTests):
     # Test Case: #THV-D01
     def test_remove_home_obj_with_valid_token(self):
         home_obj = self.create_home_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         # attempt to remove the home_obj created
         response = self.remove_obj(
             url=self.detail_url,
@@ -216,10 +264,17 @@ class HomeViewSetDeleteTests(HomeViewSetBaseTests):
             response.status_code, status.HTTP_204_NO_CONTENT,
             "#THV-D01: Remove home object with valid token failed"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj - 1,
+            "#THV-D01: Total no. of objects is not reduced by 1"
+        )
 
     # Test Case: #THV-D02
+
     def test_remove_home_obj_with_expired_token(self):
         home_obj = self.create_home_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -230,10 +285,16 @@ class HomeViewSetDeleteTests(HomeViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#THV-D02: Able to remove home object with expired token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#THV-D02: Total no. of objects is unexpectedly reduced"
+        )
 
     # Test Case: #THV-D03
     def test_remove_home_obj_with_invalid_token(self):
         home_obj = self.create_home_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -244,10 +305,16 @@ class HomeViewSetDeleteTests(HomeViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#THV-D03: Able to remove home object with invalid token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#THV-D03: Total no. of objects is unexpectedly reduced"
+        )
 
     # Test Case: #THV-D04
     def test_remove_home_obj_without_token(self):
         home_obj = self.create_home_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -256,6 +323,11 @@ class HomeViewSetDeleteTests(HomeViewSetBaseTests):
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#THV-D04: Able to remove home object without token"
+        )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#THV-D04: Total no. of objects is unexpectedly reduced"
         )
 
 
@@ -280,14 +352,8 @@ class HomeViewSetModifyTests(HomeViewSetBaseTests):
             "#THV-M01: Modify home object with valid token failed"
         )
         # Convert http response to json for comparing purpose
-        json_data = response.json()
-        modified_data = {
-            'name': json_data.get('name', None),
-            'address': json_data.get('address', None),
-            'hometype': json_data.get('hometype', None),
-        }
         self.assertEqual(
-            modified_data, self.new_data,
+            response.json(), self.get_home_obj_url(self.new_data),
             "#THV-M01: Home object was not modified with valid token"
         )
 
@@ -355,14 +421,8 @@ class HomeViewSetPartialModifyTests(HomeViewSetBaseTests):
             response.status_code, status.HTTP_200_OK,
             "#THV-P01: partial_modify Home object with valid token failed"
         )
-        json_data = response.json()
-        modified_data = {
-            'name': json_data.get('name', None),
-            'address': json_data.get('address', None),
-            'hometype': json_data.get('hometype', None),
-        }
         self.assertEqual(
-            modified_data, self.data,
+            response.json(), self.get_home_obj_url(self.data),
             "#THV-P01: Home object was not partially modified with valid token"
         )
 
@@ -431,14 +491,8 @@ class HomeViewSetRetrieveTests(HomeViewSetBaseTests):
             "#THV-R01: Retrieve one home object failed"
         )
         # Convert http response to json for comparing purpose
-        json_data = response.json()
-        retrieved_data = {
-            'name': json_data.get('name', None),
-            'address': json_data.get('address', None),
-            'hometype': json_data.get('hometype', None),
-        }
         self.assertEqual(
-            retrieved_data, self.data,
+            response.json(), self.get_home_obj_url(self.data),
             "#THV-R01: Retrieve data is not same as the posted data"
         )
 
@@ -458,14 +512,35 @@ class BreedViewSetBaseTests(BaseTestCase):
 
     # initialise before each test case
     def setUp(self):
-        self.list_url = 'breeds:breed-list'
-        self.detail_url = 'breeds:breed-detail'
+        self.list_url = vn.BREED_VIEW_LIST
+        self.detail_url = vn.BREED_VIEW_DETAIL
         self.data = factory.build(dict, FACTORY_CLASS=BreedFactory)
         # dict of Breed object as modifying data scheme
         self.new_data = factory.build(dict, FACTORY_CLASS=BreedFactory)
 
     def create_breed_obj(self):
         return BreedFactory.create(**self.data)
+    
+    def get_breed_obj_url(self, data: dict):
+        # Add url (hyperlink) from the breed object id to the dict object
+        breed_obj = Breed.objects.latest('pk')
+        data['url'] = convert_id_to_hyperlink(vn.BREED_VIEW_DETAIL, breed_obj)
+        
+        try:
+            data['cats'] = []
+            data['homes'] = []
+            cats = Cat.objects.filter(breed=breed_obj)
+            for cat in cats:
+                data['cats'].append(
+                    convert_id_to_hyperlink(vn.CAT_VIEW_DETAIL, cat)
+                )
+                data['homes'].append(
+                    convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL, cat.owner.home)
+                )
+        except Cat.DoesNotExist:
+            data['cats'] = []
+            data['homes'] = []
+        return data
 
 
 class BreedViewSetAddTests(BreedViewSetBaseTests):
@@ -477,6 +552,7 @@ class BreedViewSetAddTests(BreedViewSetBaseTests):
     # Test Case: #TBV-A01
 
     def test_add_breed_obj_with_valid_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -486,9 +562,19 @@ class BreedViewSetAddTests(BreedViewSetBaseTests):
             response.status_code, status.HTTP_201_CREATED,
             "#TBV-A01: Add breed object with valid token failed"
         )
+        self.assertEqual(
+            response.json(), self.get_breed_obj_url(self.data),
+            "#TBV-A01: Add objects is not the same"
+        )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj + 1,
+            "#TBV-A01: Breed object is not added in the total count"
+        )
 
     # Test Case: #TBV-A02
     def test_add_breed_obj_with_expired_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -498,9 +584,15 @@ class BreedViewSetAddTests(BreedViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TBV-A02: Add breed object with expired token failed"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TBV-A02: Breed object is accidentally added to total count"
+        )
 
     # Test Case: #TBV-A03
     def test_add_breed_obj_with_invalid_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -510,9 +602,15 @@ class BreedViewSetAddTests(BreedViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TBV-A03: Able to add breed object with invalid token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TBV-A03: Breed object is accidentally added to total count"
+        )
 
     # Test Case: #TBV-A04
     def test_add_breed_obj_without_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -521,7 +619,12 @@ class BreedViewSetAddTests(BreedViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TBV-A04: Able to add breed object without token"
         )
-
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TBV-A04: Breed object is accidentally added to total count"
+        )
+        
 
 class BreedViewSetDeleteTests(BreedViewSetBaseTests):
     '''
@@ -533,6 +636,7 @@ class BreedViewSetDeleteTests(BreedViewSetBaseTests):
     # Test Case: #TBV-D01
     def test_remove_breed_obj_with_valid_token(self):
         breed_obj = self.create_breed_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -543,10 +647,16 @@ class BreedViewSetDeleteTests(BreedViewSetBaseTests):
             response.status_code, status.HTTP_204_NO_CONTENT,
             "#TBV-D01: Remove breed object with valid token failed"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj - 1,
+            "#TBV-D01: Total count of Breed object is not reduced"
+        )
 
     # Test Case: #TBV-D02
     def test_remove_breed_obj_with_expired_token(self):
         breed_obj = self.create_breed_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -557,10 +667,16 @@ class BreedViewSetDeleteTests(BreedViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TBV-D02: Able to remove breed object with invalid token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TBV-D02: Total count of Breed object is unexpectedly reduced"
+        )
 
     # Test Case: #TBV-D03
     def test_remove_breed_obj_with_invalid_token(self):
         breed_obj = self.create_breed_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -571,10 +687,16 @@ class BreedViewSetDeleteTests(BreedViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TBV-D03: Able to remove breed object with invalid token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TBV-D03: Total count of Breed object is unexpectedly reduced"
+        )
 
     # Test Case: #TBV-D04
     def test_remove_breed_obj_without_token(self):
         breed_obj = self.create_breed_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -583,6 +705,11 @@ class BreedViewSetDeleteTests(BreedViewSetBaseTests):
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TBV-D04: Able to remove breed object without token"
+        )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TBV-D04: Total count of Breed object is unexpectedly reduced"
         )
 
 
@@ -606,14 +733,8 @@ class BreedViewSetModifyTests(BreedViewSetBaseTests):
             response.status_code, status.HTTP_200_OK,
             "#TBV-M01: Modify breed object with valid token failed"
         )
-        json_data = response.json()
-        modified_data = {
-            'name': json_data.get('name', None),
-            'origin': json_data.get('origin', None),
-            'description': json_data.get('description', None),
-        }
         self.assertEqual(
-            modified_data, self.new_data,
+            response.json(), self.get_breed_obj_url(self.new_data),
             "#TBV-M01: Breed object was not modified with valid token"
         )
 
@@ -682,14 +803,8 @@ class BreedViewSetPartialModifyTests(BreedViewSetBaseTests):
             "#TBV-P01: partial_modify breed object with valid token failed"
         )
         # Convert http response to json for comparing purpose
-        json_data = response.json()
-        modified_data = {
-            'name': json_data.get('name', None),
-            'origin': json_data.get('origin', None),
-            'description': json_data.get('description', None),
-        }
         self.assertEqual(
-            modified_data, self.data,
+            response.json(), self.get_breed_obj_url(self.data),
             "#TBV-P01: Breed object was not partially modified with valid token"
         )
 
@@ -758,14 +873,8 @@ class BreedViewSetRetrieveTests(BreedViewSetBaseTests):
             "#TBV-R01: Retrieve one breed object failed"
         )
         # Convert http response to json for comparing purpose
-        json_data = response.json()
-        retrieved_data = {
-            'name': json_data.get('name', None),
-            'origin': json_data.get('origin', None),
-            'description': json_data.get('description', None),
-        }
         self.assertEqual(
-            retrieved_data, self.data,
+            response.json(), self.get_breed_obj_url(self.data),
             "#TBV-R01: Retrieve data is not same as the posted data"
         )
 
@@ -785,12 +894,13 @@ class HumanViewSetBaseTests(BaseTestCase):
 
     # initialise before each test case
     def setUp(self):
-        self.list_url = 'breeds:human-list'
-        self.detail_url = 'breeds:human-detail'
+        self.list_url = vn.HUMAN_VIEW_LIST
+        self.detail_url = vn.HUMAN_VIEW_DETAIL
 
         # home FK is created before creating the Human object
+        self.home = HomeFactory.create()
         self.data = factory.build(
-            dict, FACTORY_CLASS=HumanFactory, home=HomeFactory.create())
+            dict, FACTORY_CLASS=HumanFactory, home=self.home)
         # Serve as the modifying data scheme
         self.new_data = factory.build(
             dict, FACTORY_CLASS=HumanFactory, home=HomeFactory.create())
@@ -800,13 +910,31 @@ class HumanViewSetBaseTests(BaseTestCase):
     def parse_obj(self, *dicts):
         for d in dicts:
             # convert FK to hyperlink
-            d['home'] = 'http://testserver' \
-                        + reverse('breeds:home-detail', args=[d['home'].id])
+            d['home'] = convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL, 
+                                                d['home'])
             # convert datetime object into str, default format(yyyy-mm-dd)
             d['date_of_birth'] = str(d['date_of_birth'])
 
     def create_human_obj(self):
-        return HumanFactory.create()
+        data = self.data.copy()
+        data['home'] = self.home
+        return HumanFactory.create(**data)
+    
+    def get_human_obj_url(self, data: dict):
+        # Add url (hyperlink) from the human object id to the dict object
+        human_obj = Human.objects.latest('pk')
+        data['url'] = convert_id_to_hyperlink(vn.HUMAN_VIEW_DETAIL, human_obj)
+        
+        try:
+            data['cats'] = []
+            cats = Cat.objects.filter(owner=human_obj)
+            for cat in cats:
+                data['cats'].append(
+                    convert_id_to_hyperlink(vn.CAT_VIEW_DETAIL, cat)
+                )
+        except Cat.DoesNotExist:
+            data['cats'] = []
+        return data
 
 
 class HumanViewSetAddTests(HumanViewSetBaseTests):
@@ -818,6 +946,7 @@ class HumanViewSetAddTests(HumanViewSetBaseTests):
 
     # Test Case: #TPV-A01
     def test_add_human_obj_with_valid_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -827,9 +956,15 @@ class HumanViewSetAddTests(HumanViewSetBaseTests):
             response.status_code, status.HTTP_201_CREATED,
             "#TPV-A01: Add human object with valid token failed"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj + 1,
+            "#TPV-A01: Human object is not added in the total count"
+        )
 
     # Test Case: #TPV-A02
     def test_add_human_obj_with_expired_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -839,9 +974,15 @@ class HumanViewSetAddTests(HumanViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TPV-A02: Able to add human object with expired token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TPV-A02: Invalid object is accidentally added to total count"
+        )
 
     # Test Case: #TPV-A03
     def test_add_human_obj_with_invalid_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -851,9 +992,15 @@ class HumanViewSetAddTests(HumanViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TPV-A03: Able to add human object with invalid token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TPV-A03: Invalid object is accidentally added to total count"
+        )
 
     # Test Case: #TPV-A04
     def test_add_human_obj_without_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -861,6 +1008,11 @@ class HumanViewSetAddTests(HumanViewSetBaseTests):
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TPV-A04: Able to add human object without token"
+        )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TPV-A04: Invalid object is accidentally added to total count"
         )
 
 
@@ -874,6 +1026,7 @@ class HumanViewSetDeleteTests(HumanViewSetBaseTests):
     # Test Case: #TPV-D01
     def test_remove_human_obj_with_valid_token(self):
         human_obj = self.create_human_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -882,12 +1035,18 @@ class HumanViewSetDeleteTests(HumanViewSetBaseTests):
         )
         self.assertEqual(
             response.status_code, status.HTTP_204_NO_CONTENT,
-            "#TPV-D01: Remove human object with valid token failed"
+            "#TPV-D01: Remove Human object with valid token failed"
+        )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj - 1,
+            "#TPV-D01: Total count of Human object is not reduced"
         )
 
     # Test Case: #TPV-D02
     def test_remove_human_obj_with_expired_token(self):
         human_obj = self.create_human_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -898,10 +1057,16 @@ class HumanViewSetDeleteTests(HumanViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TPV-D02: Able to remove human object with expired token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TPV-D02: Total count of Human object is unexpectedly reduced"
+        )
 
     # Test Case: #TPV-D03
     def test_remove_human_obj_with_invalid_token(self):
         human_obj = self.create_human_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -912,10 +1077,16 @@ class HumanViewSetDeleteTests(HumanViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TPV-D03: Able to remove human object with invalid token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TPV-D03: Total count of Human object is unexpectedly reduced"
+        )
 
     # Test Case: #TPV-D04
     def test_remove_human_obj_without_token(self):
         human_obj = self.create_human_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -924,6 +1095,11 @@ class HumanViewSetDeleteTests(HumanViewSetBaseTests):
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TPV-D04: Able to remove human object without token"
+        )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TPV-D04: Total count of Human object is unexpectedly reduced"
         )
 
 
@@ -948,16 +1124,8 @@ class HumanViewSetModifyTests(HumanViewSetBaseTests):
             "#TPV-M01: Modify human object with valid token failed"
         )
         # convert http response into json for comparing purpose
-        json_data = response.json()
-        modified_data = {
-            'name': json_data.get('name', None),
-            'gender': json_data.get('gender', None),
-            'date_of_birth': json_data.get('date_of_birth', None),
-            'description': json_data.get('description', None),
-            'home': json_data.get('home', None),
-        }
         self.assertEqual(
-            modified_data, self.new_data,
+            response.json(), self.get_human_obj_url(self.new_data),
             "#TPV-M01: Human object was not modified with valid token"
         )
 
@@ -1023,19 +1191,12 @@ class HumanViewSetPartialModifyTests(HumanViewSetBaseTests):
         )
         self.assertEqual(
             response.status_code, status.HTTP_200_OK,
-            "#TPV-P01: partial_modify Human object with valid token failed"
+            "#TPV-P01: partial_modify Human object with valid token failed",
+
         )
         # convert http response into json for comparing purpose
-        json_data = response.json()
-        modified_data = {
-            'name': json_data.get('name', None),
-            'gender': json_data.get('gender', None),
-            'date_of_birth': json_data.get('date_of_birth', None),
-            'description': json_data.get('description', None),
-            'home': json_data.get('home', None),
-        }
         self.assertEqual(
-            modified_data, self.data,
+            response.json(), self.get_human_obj_url(self.data),
             "#TPV-P01: Human object was not partially modified with valid token"
         )
 
@@ -1103,27 +1264,8 @@ class HumanViewSetRetrieveTests(HumanViewSetBaseTests):
             "#TPV-R01: Retrieve one human object failed"
         )
         # convert http response into json for comparing purpose
-        json_data = response.json()
-        retrieved_data = {
-            'name': json_data.get('name', None),
-            'gender': json_data.get('gender', None),
-            'date_of_birth': json_data.get('date_of_birth', None),
-            'description': json_data.get('description', None),
-            'home': json_data.get('home', None),
-        }
-        # convert the human object created above into dict
-        # to compare with the http response above
-        human_obj = {
-            'name': human_obj.name,
-            'gender': human_obj.gender,
-            'date_of_birth': human_obj.date_of_birth,
-            'description': human_obj.description,
-            'home': human_obj.home,
-        }
-        # parse the dict object into the same standards as from the API
-        self.parse_obj(human_obj)
         self.assertEqual(
-            retrieved_data, human_obj,
+            response.json(), self.get_human_obj_url(self.data),
             "#TPV-R01: Retrieve data is not same as the posted data"
         )
 
@@ -1143,32 +1285,56 @@ class CatViewSetBaseTests(BaseTestCase):
 
     # initialise before each test case
     def setUp(self):
-        self.list_url = 'breeds:cat-list'
-        self.detail_url = 'breeds:cat-detail'
+        self.list_url = vn.CAT_VIEW_LIST
+        self.detail_url = vn.CAT_VIEW_DETAIL
 
         # Breed and Human FKs are created before creating the Cat object
-        self.data = factory.build(dict, FACTORY_CLASS=CatFactory,
-                                  breed=BreedFactory.create(),
-                                  owner=HumanFactory.create())
+        self.breed = BreedFactory.create()
+        self.owner = HumanFactory.create()
+        self.data = factory.build(dict,
+                                  FACTORY_CLASS=CatFactory,
+                                  breed=self.breed,
+                                  owner=self.owner)
         # Serve as the modifying data scheme
-        self.new_data = factory.build(dict, FACTORY_CLASS=CatFactory,
+        self.new_data = factory.build(dict,
+                                      FACTORY_CLASS=CatFactory,
                                       breed=BreedFactory.create(),
                                       owner=HumanFactory.create())
         # Parsing the cat object into acceptable dict object
         self.parse_obj(self.data, self.new_data)
+        self.maxDiff = None
 
     def parse_obj(self, *dicts):
         for d in dicts:
             # convert FKs to hyperlinks
-            d['breed'] = 'http://testserver' \
-                + reverse('breeds:breed-detail', args=[d['breed'].id])
-            d['owner'] = 'http://testserver' \
-                + reverse('breeds:human-detail', args=[d['owner'].id])
+            d['breed'] = convert_id_to_hyperlink(vn.BREED_VIEW_DETAIL, 
+                                                 d['breed'])
+            d['owner'] = convert_id_to_hyperlink(vn.HUMAN_VIEW_DETAIL, 
+                                                 d['owner'])
             # convert datetime object into str, default format(yyyy-mm-dd)
             d['date_of_birth'] = str(d['date_of_birth'])
 
     def create_cat_obj(self):
-        return CatFactory.create()
+        data = self.data.copy()
+        data['breed'] = self.breed
+        data['owner'] = self.owner
+        return CatFactory.create(**data)
+    
+    def get_cat_obj_url(self, data: dict):
+        # Add url (hyperlink) from the cat object id to the dict object
+        cat_obj = Cat.objects.latest('pk')
+        data['url'] = convert_id_to_hyperlink(vn.CAT_VIEW_DETAIL, cat_obj)
+        # Convert related Breed, Cat, Home id to hyperlink
+        data['breed'] = convert_id_to_hyperlink(
+            vn.BREED_VIEW_DETAIL, cat_obj.breed
+        )
+        data['owner'] = convert_id_to_hyperlink(
+            vn.HUMAN_VIEW_DETAIL, cat_obj.owner
+        )
+        data['home'] = convert_id_to_hyperlink(
+            vn.HOME_VIEW_DETAIL, cat_obj.owner.home
+        )
+        return data
 
 
 class CatViewSetAddTests(CatViewSetBaseTests):
@@ -1180,6 +1346,7 @@ class CatViewSetAddTests(CatViewSetBaseTests):
 
     # Test Case: #TCV-A01
     def test_add_cat_obj_with_valid_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -1189,9 +1356,15 @@ class CatViewSetAddTests(CatViewSetBaseTests):
             response.status_code, status.HTTP_201_CREATED,
             "#TCV-A01: Add cat object with valid token failed"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj + 1,
+            "#TCV-A01: Cat object is not added in the total count"
+        )
 
     # Test Case: #TCV-A02
     def test_add_cat_obj_with_expired_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -1201,9 +1374,15 @@ class CatViewSetAddTests(CatViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TCV-A02: Able to add cat object with expired token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TCV-A02: Invalid object is accidentally added to total count"
+        )
 
     # Test Case: #TCV-A03
     def test_add_cat_obj_with_invalid_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -1213,9 +1392,15 @@ class CatViewSetAddTests(CatViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TCV-A03: Able to add cat object with invalid token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TCV-A03: Invalid object is accidentally added to total count"
+        )
 
     # Test Case: #TCV-A04
     def test_add_cat_obj_without_token(self):
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.add_obj(
             url=self.list_url,
             data=self.data,
@@ -1223,6 +1408,11 @@ class CatViewSetAddTests(CatViewSetBaseTests):
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TCV-A04: Able to add cat object without token"
+        )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TCV-A04: Invalid object is accidentally added to total count"
         )
 
 
@@ -1236,6 +1426,7 @@ class CatViewSetDeleteTests(CatViewSetBaseTests):
     # Test Case: #TCV-D01
     def test_remove_cat_obj_with_valid_token(self):
         cat_obj = self.create_cat_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -1246,10 +1437,17 @@ class CatViewSetDeleteTests(CatViewSetBaseTests):
             response.status_code, status.HTTP_204_NO_CONTENT,
             "#TCV-D01: Remove cat object with valid token failed"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj - 1,
+            "#TCV-D01: Total count of Cat object is not reduced"
+        )
+        
 
     # Test Case: #TCV-D02
     def test_remove_cat_obj_with_expired_token(self):
         cat_obj = self.create_cat_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -1260,10 +1458,16 @@ class CatViewSetDeleteTests(CatViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TCV-D02: Able to remove cat object with expired token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TCV-D02: Total count of Cat object is unexpectedly reduced"
+        )
 
     # Test Case: #TCV-D03
     def test_remove_cat_obj_with_invalid_token(self):
         cat_obj = self.create_cat_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -1274,10 +1478,16 @@ class CatViewSetDeleteTests(CatViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TCV-D03: Able to remove cat object with invalid token"
         )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TCV-D03: Total count of Cat object is unexpectedly reduced"
+        )
 
     # Test Case: #TCV-D04
     def test_remove_cat_obj_without_token(self):
         cat_obj = self.create_cat_obj()
+        num_of_obj = self.get_num_of_obj(self.list_url)
         response = self.remove_obj(
             url=self.detail_url,
             data=self.data,
@@ -1286,6 +1496,11 @@ class CatViewSetDeleteTests(CatViewSetBaseTests):
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TCV-D04: Able to remove cat object without token"
+        )
+        new_num_of_obj = self.get_num_of_obj(self.list_url)
+        self.assertEqual(
+            new_num_of_obj, num_of_obj,
+            "#TCV-D04: Total count of Cat object is unexpectedly reduced"
         )
 
 
@@ -1310,17 +1525,8 @@ class CatViewSetModifyTests(CatViewSetBaseTests):
             "#TCV-M01: Modify cat object with valid token failed"
         )
         # convert http response into json for comparing purpose
-        json_data = response.json()
-        modified_data = {
-            'name': json_data.get('name', None),
-            'gender': json_data.get('gender', None),
-            'date_of_birth': json_data.get('date_of_birth', None),
-            'description': json_data.get('description', None),
-            'breed': json_data.get('breed', None),
-            'owner': json_data.get('owner', None),
-        }
         self.assertEqual(
-            modified_data, self.new_data,
+            response.json(), self.get_cat_obj_url(self.new_data),
             "#TCV-M01: Cat object was not modified with valid token"
         )
 
@@ -1389,17 +1595,8 @@ class CatViewSetPartialModifyTests(CatViewSetBaseTests):
             "#TCV-P01: partial_modify Cat object with valid token failed"
         )
         # convert http response into json for comparing purpose
-        json_data = response.json()
-        modified_data = {
-            'name': json_data.get('name', None),
-            'gender': json_data.get('gender', None),
-            'date_of_birth': json_data.get('date_of_birth', None),
-            'description': json_data.get('description', None),
-            'breed': json_data.get('breed', None),
-            'owner': json_data.get('owner', None),
-        }
         self.assertEqual(
-            modified_data, self.data,
+            response.json(), self.get_cat_obj_url(self.data),
             "#TCV-P01: Cat object was not partially modified with valid token"
         )
 
@@ -1467,28 +1664,7 @@ class CatViewSetRetrieveTests(CatViewSetBaseTests):
             "#TCV-R01: Retrieve one cat object failed"
         )
         # convert http response into json for comparing purpose
-        json_data = response.json()
-        retrieved_data = {
-            'name': json_data.get('name', None),
-            'gender': json_data.get('gender', None),
-            'date_of_birth': json_data.get('date_of_birth', None),
-            'description': json_data.get('description', None),
-            'breed': json_data.get('breed', None),
-            'owner': json_data.get('owner', None),
-        }
-        # convert the cat object created above into dict
-        # to compare with the http response above
-        cat_obj = {
-            'name': cat_obj.name,
-            'gender': cat_obj.gender,
-            'date_of_birth': cat_obj.date_of_birth,
-            'description': cat_obj.description,
-            'breed': cat_obj.breed,
-            'owner': cat_obj.owner,
-        }
-        # parse the dict object into the same standards as from the API
-        self.parse_obj(cat_obj)
         self.assertEqual(
-            retrieved_data, cat_obj,
+            response.json(), self.get_cat_obj_url(self.data),
             "#TCV-R01: Retrieve data is not same as the posted data"
         )
