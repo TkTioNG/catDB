@@ -18,7 +18,7 @@ def make_request():
     return APIRequestFactory().get('/')
 
 
-class HomeSerializerTests(TestCase):
+class HomeSerializerBaseTests(TestCase):
     serializer_class = HomeSerializer
     list_url = vn.HOME_VIEW_LIST
     detail_url = vn.HOME_VIEW_DETAIL
@@ -31,38 +31,55 @@ class HomeSerializerTests(TestCase):
             'hometype': "unknown",  # Not in ['landed', 'condominium']
         }
         self.context = {
-            'request': make_request(),
+            'request': make_request()
         }
         self.assertTrue(len(self.invalid_data['name']) > 30)
         self.assertTrue(len(self.invalid_data['address']) > 300)
         self.assertNotIn(self.invalid_data['hometype'], Home.HomeType.values)
 
-    def obtain_expected_result(self, data, obj):
+    def obtain_expected_result(self, data, obj, read=False):
+        """
+        Convert Home object id into hyperlink for hyperlink related field
+
+        Args:        
+            data (dict): data of the Home object.                        
+            obj (Home): Home object instance.                        
+            read (bool, optional): IF True copy the obj data to the data dict. 
+                                   Defaults to False.
+
+        Returns:
+            dict : Home object data with hyperlink related field
+        """
+
         # convert id into hyperlink
         data['url'] = convert_id_to_hyperlink(self.detail_url, obj)
+
+        if read:
+            data['name'] = obj.name
+            data['address'] = obj.address
+            data['hometype'] = obj.hometype
+
         return data
 
     def get_required_fields(self, data: dict):
-        # return required fields for comparing purpose
-        # id or pk will be checked through the hyperlink format
+        """
+        Return required fields for comparing purpose.
+
+        Args:
+            data (dict): dict object that contains Home instance data
+
+        Returns:
+            dict: dict object that contains required fields of Home instance
+        """
+
         return {
             'name': data['name'],
             'address': data['address'],
             'hometype': data['hometype']
         }
 
-    def test_contains_expected_fields(self):
-        serializer = self.serializer_class(
-            data=self.data,
-            context=self.context
-        )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer.save()
-        self.assertEqual(
-            set(['url', 'name', 'address', 'hometype']),
-            set(serializer.data.keys())
-        )
 
+class HomeSerializerAddTests(HomeSerializerBaseTests):
     def test_add_home_obj(self):
         serializer = self.serializer_class(
             data=self.data,
@@ -70,8 +87,11 @@ class HomeSerializerTests(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         home_obj = serializer.save()
-        expected_data = self.obtain_expected_result(self.data, home_obj)
-        self.assertDictEqual(serializer.data, expected_data)
+        
+        self.assertDictEqual(
+            serializer.data, 
+            self.obtain_expected_result(self.data, home_obj)
+        )
 
     def test_add_home_obj_with_invalid_data(self):
         serializer = self.serializer_class(
@@ -80,6 +100,7 @@ class HomeSerializerTests(TestCase):
         )
         # To make sure that the data is invalid
         self.assertFalse(serializer.is_valid())
+
         # Check that all the invalid data fields are invalid
         self.assertSetEqual(
             set({'name', 'address', 'hometype'}),
@@ -91,13 +112,14 @@ class HomeSerializerTests(TestCase):
 
     def test_add_home_obj_with_null_data(self):
         # Obtain the original number of Home objects
-        no_of_homes = len(Home.objects.all())
+        num_of_obj = len(Home.objects.all())
         serializer = self.serializer_class(
             data={},    # null data
             context=self.context
         )
         # To make sure that the data is invalid
         self.assertFalse(serializer.is_valid())
+
         # To make sure that all the not null field should
         # raise error
         self.assertSetEqual(
@@ -105,11 +127,13 @@ class HomeSerializerTests(TestCase):
             set(serializer.errors.keys())
         )
         # To make sure that the overall number of objects is the same
-        new_no_of_homes = no_of_homes = len(Home.objects.all())
-        self.assertEqual(new_no_of_homes, no_of_homes)
+        new_num_of_obj = num_of_obj = len(Home.objects.all())
+        self.assertEqual(new_num_of_obj, num_of_obj)
 
+
+class HomeSerializerModifyTests(HomeSerializerBaseTests):
     def test_modify_home_obj(self):
-        home_obj = HomeFactory.create()
+        home_obj = HomeFactory.create(**self.data)
         serializer = self.serializer_class(
             instance=home_obj,
             context=self.context
@@ -128,15 +152,11 @@ class HomeSerializerTests(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
-        # To check that it is the same instance through hyperlink
-        self.assertEqual(
-            serializer.data['url'],
-            convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL, home_obj)
-        )
+
         # To check if the objects is modified
         self.assertEqual(
-            self.get_required_fields(serializer.data),
-            modified_data
+            serializer.data,
+            self.obtain_expected_result(modified_data, home_obj)
         )
 
     def test_modify_home_obj_with_invalid_data(self):
@@ -154,6 +174,7 @@ class HomeSerializerTests(TestCase):
         )
         # To make sure that the data is invalid
         self.assertFalse(serializer.is_valid())
+
         # Check that all the invalid data fields are invalid
         self.assertSetEqual(
             set({'name', 'address', 'hometype'}),
@@ -165,8 +186,8 @@ class HomeSerializerTests(TestCase):
             context=self.context
         )
         self.assertEqual(
-            self.get_required_fields(serializer.data),
-            self.data
+            serializer.data,
+            self.obtain_expected_result(self.data, home_obj)
         )
 
     def test_modify_home_obj_with_null_data(self):
@@ -178,6 +199,7 @@ class HomeSerializerTests(TestCase):
         )
         # To make sure that the adding of data is not valid
         self.assertFalse(serializer.is_valid())
+
         # To make sure that all the not null field should
         # raise error
         self.assertSetEqual(
@@ -190,32 +212,25 @@ class HomeSerializerTests(TestCase):
             context=self.context
         )
         self.assertEqual(
-            self.get_required_fields(serializer.data),
-            self.data
+            serializer.data,
+            self.obtain_expected_result(self.data, home_obj)
+        )
+
+
+class HomeSerializerRetrieveTests(HomeSerializerBaseTests):
+    def test_contains_expected_fields(self):
+        serializer = self.serializer_class(
+            data=self.data,
+            context=self.context
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+        self.assertEqual(
+            set({'url', 'name', 'address', 'hometype'}),
+            set(serializer.data.keys())
         )
 
     def test_retrieve_home_obj_one_by_one(self):
-        # Create multiple homes object to retrieve
-        home_objs = HomeFactory.create_batch(10)
-        for home_obj in home_objs:
-            # Retrieve each object one by one
-            serializer = self.serializer_class(
-                instance=home_obj,
-                context=self.context
-            )
-            data = {
-                'url': convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL, home_obj),
-                'name': home_obj.name,
-                'address': home_obj.address,
-                'hometype': home_obj.hometype,
-            }
-            # Compare all the fields
-            self.assertDictEqual(
-                serializer.data,
-                data
-            )
-
-    def test_retrieve_multiple_home_objs(self):
         # Create multiple homes object to retrieve
         home_objs = HomeFactory.create_batch(10)
         serializer = self.serializer_class(
@@ -225,26 +240,18 @@ class HomeSerializerTests(TestCase):
         )
         # Check the length of the generated serializer data
         self.assertEqual(len(serializer.data), 10)
+
         # Compare the data one by one
         for home_obj, serializer_data in zip(home_objs, serializer.data):
-            # To check that it is the same instance
-            self.assertEqual(
-                serializer_data['url'],
-                convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL, home_obj)
-            )
-            data = {
-                'name': home_obj.name,
-                'address': home_obj.address,
-                'hometype': home_obj.hometype,
-            }
-            # Compare all the fields
+            # Compare all the fields to make the the home object is
+            # serialize correctly
             self.assertDictEqual(
-                self.get_required_fields(serializer_data),
-                data
+                serializer_data,
+                self.obtain_expected_result({}, home_obj, read=True)
             )
 
 
-class BreedSerializerTests(TestCase):
+class BreedSerializerBaseTests(TestCase):
     serializer_class = BreedSerializer
     list_url = vn.BREED_VIEW_LIST
     detail_url = vn.BREED_VIEW_DETAIL
@@ -257,24 +264,27 @@ class BreedSerializerTests(TestCase):
             'description': "*" * 301,   # More than 300 characters
         }
         self.context = {
-            'request': make_request(),
+            'request': make_request()
         }
         self.maxDiff = None
 
-    def obtain_expected_result(self, data_dict, obj, cats=None):
+    def obtain_expected_result(self, data_dict, obj, read=False):
         data = dict(data_dict)
         # convert id into hyperlink
         data['url'] = convert_id_to_hyperlink(self.detail_url, obj)
-        data['name'] = obj.name
-        data['origin'] = obj.origin
-        data['description'] = obj.description
 
+        if read:
+            data['name'] = obj.name
+            data['origin'] = obj.origin
+            data['description'] = obj.description
+
+        cats = obj.cats.all()
         if cats:
             # Convert related cats and homes id to hyperlinks
             cat_hyperlinks = []
             home_hyperlinks = set()  # Use set to avoid duplicate data
-            # Sort cat objects based on the Cat model ordering method
-            for cat in cats:  # sorted(cats, key=lambda c: c.name)
+
+            for cat in cats:
                 cat_hyperlinks.append(
                     convert_id_to_hyperlink(vn.CAT_VIEW_DETAIL, cat)
                 )
@@ -284,18 +294,21 @@ class BreedSerializerTests(TestCase):
                         cat.owner.home
                     )
                 )
+
             data['cats'] = cat_hyperlinks
-            data['homes'] = home_hyperlinks  # convert back to list
+            data['homes'] = home_hyperlinks
             data = self.sort_hyperlinks(data)
 
         else:
-            # If no realted cats, the below fields should be empty list
+            # If there are no related cats,
+            # the below fields should remain as empty list
             data['cats'] = []
             data['homes'] = []
 
         return data
 
     def sort_hyperlinks(self, data: dict):
+        # Sort the hyperlinks for cats and homes field
         if data.get('cats', None):
             data['cats'] = sorted(data['cats'])
         if data.get('homes', None):
@@ -303,7 +316,7 @@ class BreedSerializerTests(TestCase):
         return data
 
     def get_required_fields(self, data: dict):
-        # return required fields for comparing purpose
+        # Return required fields for comparing purpose
         # id or pk will be checked through the hyperlink format
         return {
             'name': data['name'],
@@ -311,38 +324,36 @@ class BreedSerializerTests(TestCase):
             'description': data['description']
         }
 
-    def test_contains_expected_fields(self):
-        serializer = self.serializer_class(
-            data=self.data,
-            context=self.context
-        )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer.save()
-        data = serializer.data
-        self.assertEqual(
-            set(data.keys()),
-            set(['url', 'name', 'origin', 'description', 'cats', 'homes'])
-        )
 
+class BreedSerializerAddTests(BreedSerializerBaseTests):
     def test_add_breed_obj(self):
+        num_of_obj = len(Breed.objects.all())
         serializer = self.serializer_class(
             data=self.data,
             context=self.context
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         breed_obj = serializer.save()
-        expected_data = self.obtain_expected_result(self.data, breed_obj)
-        self.assertDictEqual(serializer.data, expected_data)
+
+        # Make sure that the object is serialized correctly
+        self.assertDictEqual(
+            serializer.data, self.obtain_expected_result(self.data, breed_obj)
+        )
+
+        # To make sure that total count of breed object is increased by 1
+        new_num_of_obj = len(Breed.objects.all())
+        self.assertEqual(new_num_of_obj, num_of_obj + 1)
 
     def test_add_breed_obj_with_invalid_data(self):
         # Obtain the original number of Breed objects
-        no_of_breeds = len(Breed.objects.all())
+        num_of_obj = len(Breed.objects.all())
         serializer = self.serializer_class(
             data=self.invalid_data,
             context=self.context
         )
         # To make sure that the data is invalid
         self.assertFalse(serializer.is_valid())
+
         # Check that all the invalid data fields are invalid
         self.assertSetEqual(
             set(serializer.errors.keys()),
@@ -350,18 +361,20 @@ class BreedSerializerTests(TestCase):
         )
         # To make sure that the data is not added
         breed = Breed.objects.filter(**self.invalid_data)
-        self.assertEqual(len(breed), 0)  # Check that no result filtered
+        self.assertEqual(len(breed), 0)
+
         # To make sure that the overall number of objects is the same
-        new_no_of_breeds = len(Breed.objects.all())
-        self.assertEqual(new_no_of_breeds, no_of_breeds)
+        new_num_of_obj = len(Breed.objects.all())
+        self.assertEqual(new_num_of_obj, num_of_obj)
 
     def test_add_breed_obj_with_not_unique_name(self):
         # name field in the Breed model should be unique
         BreedFactory.create(name=self.data['name'])
         # Obtain the original number of Breed objects
-        no_of_breeds = len(Breed.objects.all())
+        num_of_obj = len(Breed.objects.all())
+        # Create new data that has same name as above
         serializer = self.serializer_class(
-            data=self.data,  # data with same name as above
+            data=self.data,
             context=self.context
         )
         # To make sure that the adding of same name is not valid
@@ -371,19 +384,21 @@ class BreedSerializerTests(TestCase):
         # To make sure that the data is not added
         breeds = Breed.objects.filter(name=self.data['name'])
         self.assertEqual(len(breeds), 1)
+
         # To make sure that the overall number of objects is the same
-        new_no_of_breeds = len(Breed.objects.all())
-        self.assertEqual(new_no_of_breeds, no_of_breeds)
+        new_num_of_obj = len(Breed.objects.all())
+        self.assertEqual(new_num_of_obj, num_of_obj)
 
     def test_add_breed_obj_with_null_data(self):
         # Obtain the original number of Breed objects
-        no_of_breeds = len(Breed.objects.all())
+        num_of_obj = len(Breed.objects.all())
         serializer = self.serializer_class(
             data={},    # null data
             context=self.context
         )
         # To make sure that the adding of data is not valid
         self.assertFalse(serializer.is_valid())
+
         # To make sure that all the not null field should
         # raise error
         self.assertSetEqual(
@@ -391,8 +406,8 @@ class BreedSerializerTests(TestCase):
             set({'name', 'origin'})
         )
         # To make sure that the overall number of objects is the same
-        new_no_of_breeds = len(Breed.objects.all())
-        self.assertEqual(new_no_of_breeds, no_of_breeds)
+        new_num_of_obj = len(Breed.objects.all())
+        self.assertEqual(new_num_of_obj, num_of_obj)
 
     def test_add_breed_obj_with_cats_obj(self):
         # add related cats objects to the breed object
@@ -402,25 +417,26 @@ class BreedSerializerTests(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         breed_obj = serializer.save()
+
         # Created related cats objects
-        cats = CatFactory.create_batch(100, breed=breed_obj)
-        expected_data = self.obtain_expected_result(
-            self.data, breed_obj, cats=cats
-        )
+        CatFactory.create_batch(100, breed=breed_obj)
         self.assertDictEqual(
             self.sort_hyperlinks(serializer.data),
-            expected_data
+            self.obtain_expected_result(self.data, breed_obj)
         )
         # Noted that add invalid cats object to the breed will be
         # tested in the CatSerializerTests
 
+
+class BreedSerializerModifyTests(BreedSerializerBaseTests):
     def test_modify_breed_obj(self):
-        breed_obj = BreedFactory.create()
+        breed_obj = BreedFactory.create(**self.data)
         serializer = self.serializer_class(
             instance=breed_obj,
             context=self.context
         )
         modified_data = factory.build(dict, FACTORY_CLASS=BreedFactory)
+
         # Check that the new data is not the same as the old data
         self.assertNotEqual(
             self.get_required_fields(serializer.data),
@@ -433,15 +449,11 @@ class BreedSerializerTests(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
-        # To check that it is the same instance
-        self.assertEqual(
-            serializer.data['url'],
-            convert_id_to_hyperlink(vn.BREED_VIEW_DETAIL, breed_obj)
-        )
+
         # To check if the objects is modified
         self.assertEqual(
-            self.get_required_fields(serializer.data),
-            modified_data
+            serializer.data,
+            self.obtain_expected_result(modified_data, breed_obj)
         )
 
     def test_modify_breed_obj_with_invalid_data(self):
@@ -458,6 +470,7 @@ class BreedSerializerTests(TestCase):
         )
         # To make sure that the data is invalid
         self.assertFalse(serializer.is_valid())
+
         # Check that all the invalid data fields are invalid
         self.assertSetEqual(
             set(serializer.errors.keys()),
@@ -490,6 +503,10 @@ class BreedSerializerTests(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertSetEqual({'name'}, set(serializer.errors.keys()))
 
+        # To make sure that the name is not change
+        breed = Breed.objects.filter(name=breed_objs[0].name)
+        self.assertEqual(len(breed), 1)
+
     def test_modify_breed_obj_with_null_data(self):
         breed_obj = BreedFactory.create(**self.data)
         serializer = self.serializer_class(
@@ -499,9 +516,10 @@ class BreedSerializerTests(TestCase):
         )
         # To make sure that the adding of data is not valid
         self.assertFalse(serializer.is_valid())
+
         # To make sure that all the not null field should
         # raise error
-        self.assertSetEqual( 
+        self.assertSetEqual(
             set(serializer.errors.keys()),
             set({'name', 'origin'})
         )
@@ -511,48 +529,65 @@ class BreedSerializerTests(TestCase):
             context=self.context
         )
         self.assertEqual(
-            self.get_required_fields(serializer.data),
-            self.data
+            serializer.data,
+            self.obtain_expected_result(self.data, breed_obj)
+        )
+
+
+class BreedSerializerRetrieveTests(BreedSerializerBaseTests):
+    def test_contains_expected_fields(self):
+        serializer = self.serializer_class(
+            data=self.data,
+            context=self.context
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+
+        data = serializer.data
+        self.assertEqual(
+            set(data.keys()),
+            set({'url', 'name', 'origin', 'description', 'cats', 'homes'})
         )
 
     def test_retrieve_breed_obj_one_by_one(self):
         # Create multiple breeds object to retrieve
         breed_objs = BreedFactory.create_batch(10)
+        serializer = self.serializer_class(
+            instance=breed_objs,
+            many=True,
+            context=self.context
+        )
+        # Check the length of the generated serializer data
+        self.assertEqual(len(serializer.data), 10)
+        
+        # Retrieve each object one by one
         for breed_obj in breed_objs:
-            # Retrieve each object one by one
             # Create cat objects to the breed objects
-            cats = CatFactory.create_batch(3, breed=breed_obj)
+            CatFactory.create_batch(3, breed=breed_obj)
+            
             serializer = self.serializer_class(
                 instance=breed_obj,
                 context=self.context
             )
-            self.data = {
-                'name': breed_obj.name,
-                'origin': breed_obj.origin,
-                'description': breed_obj.description,
-            }
-            expected_data = self.obtain_expected_result(
-                self.data, breed_obj, cats=cats
-            )
             # Compare all the fields
             self.assertDictEqual(
                 self.sort_hyperlinks(serializer.data),
-                expected_data
+                self.obtain_expected_result(self.data, breed_obj, read=True)
             )
 
 
-class HumanSerializerTests(TestCase):
+class HumanSerializerBaseTests(TestCase):
     serializer_class = HumanSerializer
     list_url = vn.HUMAN_VIEW_LIST
     detail_url = vn.HUMAN_VIEW_DETAIL
 
     def setUp(self):
-        self.data = factory.build(dict, FACTORY_CLASS=HumanFactory)
-        self.data['date_of_birth'] = str(self.data['date_of_birth'])
-        self.data['home'] = convert_id_to_hyperlink(
-            vn.HOME_VIEW_DETAIL,
-            HomeFactory.create()
-        )
+        # home FK is created before creating the Human object
+        self.home = HomeFactory.create()
+        self.data = factory.build(
+            dict, FACTORY_CLASS=HumanFactory, home=self.home)
+        self.parse_human_dict(self.data)
+        
         self.invalid_data = {
             'name': "*" * 31,           # More than 30 characters
             'gender': "*",              # Not in ('M', 'F', 'O')
@@ -563,26 +598,25 @@ class HumanSerializerTests(TestCase):
         }
         self.context = {
             'request': make_request(),
-        }
-        self.fields = {
-            'url',
-            'name',
-            'gender',
-            'date_of_birth',
-            'description',
-            'home',
-            'cats'
-        }
+        }        
         self.maxDiff = None
+        
+    def create_human_obj(self):
+        data = self.data.copy()
+        data['home'] = self.home
+        return HumanFactory.create(**data)
 
-    def obtain_expected_result(self, data_dict, obj):
+    def obtain_expected_result(self, data_dict, obj, read=False):
         data = dict(data_dict)
         # convert id into hyperlink
         data['url'] = convert_id_to_hyperlink(self.detail_url, obj)
-        data['name'] = obj.name
-        data['gender'] = obj.gender
-        data['date_of_birth'] = str(obj.date_of_birth)
-        data['description'] = obj.description
+        
+        if read:
+            data['name'] = obj.name
+            data['gender'] = obj.gender
+            data['date_of_birth'] = str(obj.date_of_birth)
+            data['description'] = obj.description
+        
         # Convert related home id to hyperlink
         data['home'] = convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL, obj.home)
         data['cats'] = []
@@ -590,6 +624,23 @@ class HumanSerializerTests(TestCase):
             data['cats'].append(
                 convert_id_to_hyperlink(vn.CAT_VIEW_DETAIL, cat)
             )
+        data = self.sort_hyperlinks(data)
+        
+        return data
+    
+    def sort_hyperlinks(self, data: dict):
+        # Sort the hyperlinks for cats field
+        if data.get('cats', None):
+            data['cats'] = sorted(data['cats'])
+        return data
+    
+    def parse_human_dict(self, data:dict):
+        # Parse Human instance dict to API standards
+        data['date_of_birth'] = str(data['date_of_birth'])
+        data['home'] = convert_id_to_hyperlink(
+            vn.HOME_VIEW_DETAIL,
+            data['home']
+        )
         return data
 
     def get_required_fields(self, data: dict):
@@ -603,16 +654,8 @@ class HumanSerializerTests(TestCase):
             'home': data['home']
         }
 
-    def test_contains_expected_fields(self):
-        serializer = self.serializer_class(
-            data=self.data,
-            context=self.context
-        )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer.save()
-        data = serializer.data
-        self.assertEqual(set(data.keys()), set(self.fields))
 
+class HumanSerializerAddTests(HumanSerializerBaseTests):
     def test_add_human_obj(self):
         serializer = self.serializer_class(
             data=self.data,
@@ -620,36 +663,41 @@ class HumanSerializerTests(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         human_obj = serializer.save()
-        expected_data = self.obtain_expected_result(self.data, human_obj)
-        self.assertDictEqual(serializer.data, expected_data)
+        
+        self.assertDictEqual(
+            serializer.data, 
+            self.obtain_expected_result(self.data, human_obj)
+        )
 
     def test_add_human_obj_with_invalid_data(self):
         # Obtain the original number of Human objects
-        no_of_humans = len(Human.objects.all())
+        num_of_obj = len(Human.objects.all())
         serializer = self.serializer_class(
             data=self.invalid_data,
             context=self.context
         )
         # To make sure that the data is invalid
         self.assertFalse(serializer.is_valid())
+        
         # Check that all the invalid data fields are invalid
         self.assertSetEqual(
             set(serializer.errors.keys()),
             set({'name', 'gender', 'date_of_birth', 'description', 'home'})
         )
         # To make sure that the overall number of objects is the same
-        new_no_of_humans = len(Human.objects.all())
-        self.assertEqual(new_no_of_humans, no_of_humans)
+        new_num_of_obj = len(Human.objects.all())
+        self.assertEqual(new_num_of_obj, num_of_obj)
 
     def test_add_human_obj_with_null_data(self):
         # Obtain the original number of Human objects
-        no_of_humans = len(Human.objects.all())
+        num_of_obj = len(Human.objects.all())
         serializer = self.serializer_class(
             data={},    # null data
             context=self.context
         )
         # To make sure that the adding of data is not valid
         self.assertFalse(serializer.is_valid())
+        
         # To make sure that all the not null field should
         # raise error
         self.assertSetEqual(
@@ -657,8 +705,8 @@ class HumanSerializerTests(TestCase):
             set({'name', 'date_of_birth', 'home'})
         )
         # To make sure that the data is not added
-        new_no_of_humans = len(Human.objects.all())
-        self.assertEqual(new_no_of_humans, no_of_humans)
+        new_num_of_obj = len(Human.objects.all())
+        self.assertEqual(new_num_of_obj, num_of_obj)
 
     def test_add_human_obj_with_home_obj(self):
         # add related cats objects to the human object
@@ -668,13 +716,18 @@ class HumanSerializerTests(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         human_obj = serializer.save()
+        
         # Created related cats objects
-        expected_data = self.obtain_expected_result(self.data, human_obj)
-        self.assertDictEqual(serializer.data, expected_data)
+        CatFactory.create_batch(10, owner=human_obj)
+        self.assertDictEqual(
+            self.sort_hyperlinks(serializer.data), 
+            self.obtain_expected_result(self.data, human_obj)
+        )
 
     def test_add_human_obj_with_invalid_home_obj(self):
         # Obtain the original number of Human objects
-        no_of_humans = len(Human.objects.all())
+        num_of_obj = len(Human.objects.all())
+        
         # Add invalid Home objects to the human object
         # Swap Home with Breed Object
         self.data['home'] = BreedFactory.create()
@@ -684,44 +737,48 @@ class HumanSerializerTests(TestCase):
         )
         # To make sure that the data is invalid
         self.assertFalse(serializer.is_valid())
+        
         # Check that all the invalid data fields are invalid
         self.assertSetEqual(set(serializer.errors.keys()), set({'home'}))
+        
         # To make sure that the overall number of objects is the same
-        new_no_of_humans = len(Human.objects.all())
-        self.assertEqual(new_no_of_humans, no_of_humans)
+        new_num_of_obj = len(Human.objects.all())
+        self.assertEqual(new_num_of_obj, num_of_obj)
 
+
+class HumanSerializerModifyTests(HumanSerializerBaseTests):
     def test_modify_human_obj(self):
-        human_obj = HumanFactory.create()
+        human_obj = self.create_human_obj()
         serializer = self.serializer_class(
             instance=human_obj,
             context=self.context
         )
+        modified_data = factory.build(
+            dict, FACTORY_CLASS=HumanFactory, home=self.home
+        )
+        self.parse_human_dict(modified_data)
         # Check that the new data is not the same as the old data
         self.assertNotEqual(
             self.get_required_fields(serializer.data),
-            self.data
+            modified_data
         )
         # Update the human object
         serializer = self.serializer_class(
             instance=human_obj,
-            data=self.data,
+            data=modified_data,
             context=self.context
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
-        # To check that it is the same instance
-        self.assertEqual(
-            serializer.data['url'],
-            convert_id_to_hyperlink(vn.HUMAN_VIEW_DETAIL, human_obj)
-        )
+        
         # To check if the objects is modified
         self.assertDictEqual(
-            self.get_required_fields(serializer.data),
-            self.data
+            serializer.data,
+            self.obtain_expected_result(modified_data, human_obj)
         )
 
     def test_modify_human_obj_with_invalid_data(self):
-        human_obj = HumanFactory.create()
+        human_obj = self.create_human_obj()
         expected_data = self.obtain_expected_result(self.data, human_obj)
         serializer = self.serializer_class(
             instance=human_obj,
@@ -735,6 +792,7 @@ class HumanSerializerTests(TestCase):
         )
         # To make sure that the data is invalid
         self.assertFalse(serializer.is_valid())
+        
         # Check that all the invalid data fields are invalid
         self.assertSetEqual(
             set(serializer.errors.keys()),
@@ -748,7 +806,7 @@ class HumanSerializerTests(TestCase):
         self.assertDictEqual(serializer.data, expected_data)
 
     def test_modify_human_obj_with_null_data(self):
-        human_obj = HumanFactory.create()
+        human_obj = self.create_human_obj()
         expected_data = self.obtain_expected_result(self.data, human_obj)
         serializer = self.serializer_class(
             instance=human_obj,
@@ -770,36 +828,62 @@ class HumanSerializerTests(TestCase):
         )
         self.assertDictEqual(serializer.data, expected_data)
 
+
+class HumanSerializerRetrieveTests(HumanSerializerBaseTests):
+    def test_contains_expected_fields(self):
+        serializer = self.serializer_class(
+            data=self.data,
+            context=self.context
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+        data = serializer.data
+        self.assertEqual(
+            set(data.keys()), 
+            set({'url', 'name', 'gender', 'date_of_birth', 
+                 'description', 'home', 'cats'})
+        )
+
     def test_retrieve_human_obj_one_by_one(self):
         # Create multiple humans object to retrieve
         human_objs = HumanFactory.create_batch(10)
-        for human_obj in human_objs:
-            # Retrieve each object one by one
+        serializer = self.serializer_class(
+            instance=human_objs,
+            many=True,
+            context=self.context
+        )
+        # Check the length of the generated serializer data
+        self.assertEqual(len(serializer.data), 10)
+        
+        # Retrieve each object one by one
+        for human_obj in human_objs:     
+            # Create cat objects to the breed objects
+            CatFactory.create_batch(3, owner=human_obj)
+            
             serializer = self.serializer_class(
                 instance=human_obj,
                 context=self.context
             )
-            expected_data = self.obtain_expected_result(self.data, human_obj)
             # Compare all the fields
-            self.assertDictEqual(serializer.data, expected_data)
+            self.assertDictEqual(
+                self.sort_hyperlinks(serializer.data), 
+                self.obtain_expected_result(self.data, human_obj, read=True)
+            )
 
 
-class CatSerializerTests(TestCase):
+class CatSerializerBaseTests(TestCase):
     serializer_class = CatSerializer
     list_url = vn.CAT_VIEW_LIST
     detail_url = vn.CAT_VIEW_DETAIL
 
     def setUp(self):
-        self.data = factory.build(dict, FACTORY_CLASS=CatFactory)
-        self.data['date_of_birth'] = str(self.data['date_of_birth'])
-        self.data['breed'] = convert_id_to_hyperlink(
-            vn.BREED_VIEW_DETAIL,
-            BreedFactory.create()
-        )
-        self.data['owner'] = convert_id_to_hyperlink(
-            vn.HUMAN_VIEW_DETAIL,
-            HumanFactory.create()
-        )
+        # breed and owner FK is created before creating the Cat object
+        self.breed = BreedFactory.create()
+        self.owner = HumanFactory.create()
+        self.data = factory.build(
+            dict, FACTORY_CLASS=CatFactory, breed=self.breed, owner=self.owner)
+        self.parse_cat_dict(self.data)
+        
         self.invalid_data = {
             'name': "*" * 31,           # More than 30 characters
             'gender': "*",              # Not in ('M', 'F', 'O')
@@ -810,28 +894,27 @@ class CatSerializerTests(TestCase):
             'owner': HomeFactory.create()   # Invalid Human objects
         }
         self.context = {
-            'request': make_request(),
-        }
-        self.fields = {
-            'url',
-            'name',
-            'gender',
-            'date_of_birth',
-            'description',
-            'breed',
-            'owner',
-            'home'
+            'request': make_request()
         }
         self.maxDiff = None
+        
+    def create_cat_obj(self):
+        data = self.data.copy()
+        data['breed'] = self.breed
+        data['owner'] = self.owner
+        return CatFactory.create(**data)
 
-    def obtain_expected_result(self, data_dict, obj):
+    def obtain_expected_result(self, data_dict, obj, read=False):
         data = dict(data_dict)
         # convert id into hyperlink
         data['url'] = convert_id_to_hyperlink(self.detail_url, obj)
-        data['name'] = obj.name
-        data['gender'] = obj.gender
-        data['date_of_birth'] = str(obj.date_of_birth)
-        data['description'] = obj.description
+        
+        if read:
+            data['name'] = obj.name
+            data['gender'] = obj.gender
+            data['date_of_birth'] = str(obj.date_of_birth)
+            data['description'] = obj.description
+        
         # Convert related Breed, Human, Home id to hyperlink
         data['breed'] = convert_id_to_hyperlink(
             vn.BREED_VIEW_DETAIL, obj.breed
@@ -842,6 +925,23 @@ class CatSerializerTests(TestCase):
         data['home'] = convert_id_to_hyperlink(
             vn.HOME_VIEW_DETAIL, obj.owner.home
         )
+        return data
+    
+    def parse_cat_dict(self, data:dict):
+        # Parse Human instance dict to API standards
+        data['date_of_birth'] = str(data['date_of_birth'])
+        
+        # Convert related Breed, Human, Home id to hyperlink
+        data['breed'] = convert_id_to_hyperlink(
+            vn.BREED_VIEW_DETAIL, data['breed']
+        )
+        data['owner'] = convert_id_to_hyperlink(
+            vn.HUMAN_VIEW_DETAIL, data['owner']
+        )
+        if data.get('home', None):
+            data['home'] = convert_id_to_hyperlink(
+                vn.HOME_VIEW_DETAIL, data['home']
+            )
         return data
 
     def get_required_fields(self, data: dict):
@@ -856,16 +956,8 @@ class CatSerializerTests(TestCase):
             'owner': data['owner']
         }
 
-    def test_contains_expected_fields(self):
-        serializer = self.serializer_class(
-            data=self.data,
-            context=self.context
-        )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer.save()
-        data = serializer.data
-        self.assertEqual(set(data.keys()), set(self.fields))
 
+class CatSerializerAddTests(CatSerializerBaseTests):
     def test_add_cat_obj(self):
         serializer = self.serializer_class(
             data=self.data,
@@ -873,43 +965,42 @@ class CatSerializerTests(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         cat_obj = serializer.save()
-        expected_data = self.obtain_expected_result(self.data, cat_obj)
-        self.assertDictEqual(serializer.data, expected_data)
+        
+        self.assertDictEqual(
+            serializer.data, 
+            self.obtain_expected_result(self.data, cat_obj)
+        )
 
     def test_add_cat_obj_with_invalid_data(self):
         # Obtain the original number of Cat objects
-        no_of_cats = len(Cat.objects.all())
+        num_of_obj = len(Cat.objects.all())
         serializer = self.serializer_class(
             data=self.invalid_data,
             context=self.context
         )
         # To make sure that the data is invalid
         self.assertFalse(serializer.is_valid())
+        
         # Check that all the invalid data fields are invalid
         self.assertSetEqual(
             set(serializer.errors.keys()),
-            set({
-                'name',
-                'gender',
-                'date_of_birth',
-                'description',
-                'breed',
-                'owner'
-            })
+            set({'name', 'gender', 'date_of_birth', 
+                 'description', 'breed', 'owner'})
         )
         # To make sure that the overall number of objects is the same
-        new_no_of_cats = len(Cat.objects.all())
-        self.assertEqual(new_no_of_cats, no_of_cats)
+        new_num_of_obj = len(Cat.objects.all())
+        self.assertEqual(new_num_of_obj, num_of_obj)
 
     def test_add_cat_obj_with_null_data(self):
         # Obtain the original number of Cat objects
-        no_of_cats = len(Cat.objects.all())
+        num_of_obj = len(Cat.objects.all())
         serializer = self.serializer_class(
             data={},    # null data
             context=self.context
         )
         # To make sure that the adding of data is not valid
         self.assertFalse(serializer.is_valid())
+        
         # To make sure that all the not null field should
         # raise error
         self.assertSetEqual(
@@ -917,12 +1008,13 @@ class CatSerializerTests(TestCase):
             set({'name', 'date_of_birth', 'breed', 'owner'})
         )
         # To make sure that the data is not added
-        new_no_of_cats = len(Cat.objects.all())
-        self.assertEqual(new_no_of_cats, no_of_cats)
+        new_num_of_obj = len(Cat.objects.all())
+        self.assertEqual(new_num_of_obj, num_of_obj)
 
     def test_add_cat_obj_with_invalid_breed_and_human_obj(self):
         # Obtain the original number of Cat objects
-        no_of_cats = len(Cat.objects.all())
+        num_of_obj = len(Cat.objects.all())
+        
         # Add invalid Breed and Human objects to the cat object
         # Swap Breed and Owner with Home Object
         self.data['breed'] = HomeFactory.create()
@@ -933,47 +1025,50 @@ class CatSerializerTests(TestCase):
         )
         # To make sure that the data is invalid
         self.assertFalse(serializer.is_valid())
+        
         # Check that all the invalid data fields are invalid
         self.assertSetEqual(
-            set(serializer.errors.keys()), 
+            set(serializer.errors.keys()),
             set({'breed', 'owner'})
         )
         # To make sure that the overall number of objects is the same
-        new_no_of_cats = len(Cat.objects.all())
-        self.assertEqual(new_no_of_cats, no_of_cats)
+        new_num_of_obj = len(Cat.objects.all())
+        self.assertEqual(new_num_of_obj, num_of_obj)
 
+
+class CatSerializerModifyTests(CatSerializerBaseTests):
     def test_modify_cat_obj(self):
-        cat_obj = CatFactory.create()
+        cat_obj = self.create_cat_obj()
         serializer = self.serializer_class(
             instance=cat_obj,
             context=self.context
         )
+        modified_data = factory.build(
+            dict, FACTORY_CLASS=CatFactory, breed=self.breed, owner=self.owner
+        )
+        self.parse_cat_dict(modified_data)
         # Check that the new data is not the same as the old data
         self.assertNotEqual(
-            self.get_required_fields(serializer.data),
-            self.data
+            serializer.data,
+            self.obtain_expected_result(modified_data, cat_obj)
         )
         # Update the cat object
         serializer = self.serializer_class(
             instance=cat_obj,
-            data=self.data,
+            data=modified_data,
             context=self.context
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
-        # To check that it is the same instance
-        self.assertEqual(
-            serializer.data['url'],
-            convert_id_to_hyperlink(vn.CAT_VIEW_DETAIL, cat_obj)
-        )
+        
         # To check if the objects is modified
         self.assertDictEqual(
-            self.get_required_fields(serializer.data),
-            self.data
+            serializer.data,
+            self.obtain_expected_result(modified_data, cat_obj)
         )
 
     def test_modify_cat_obj_with_invalid_data(self):
-        cat_obj = CatFactory.create()
+        cat_obj = self.create_cat_obj()
         expected_data = self.obtain_expected_result(self.data, cat_obj)
         serializer = self.serializer_class(
             instance=cat_obj,
@@ -987,17 +1082,12 @@ class CatSerializerTests(TestCase):
         )
         # To make sure that the data is invalid
         self.assertFalse(serializer.is_valid())
+        
         # Check that all the invalid data fields are invalid
         self.assertSetEqual(
             set(serializer.errors.keys()),
-            set({
-                'name',
-                'gender',
-                'date_of_birth',
-                'description',
-                'breed',
-                'owner'
-            })
+            set({'name', 'gender', 'date_of_birth', 
+                 'description', 'breed', 'owner'})
         )
         # To make sure the objects is not modified
         serializer = self.serializer_class(
@@ -1007,7 +1097,7 @@ class CatSerializerTests(TestCase):
         self.assertDictEqual(serializer.data, expected_data)
 
     def test_modify_cat_obj_with_null_data(self):
-        cat_obj = CatFactory.create()
+        cat_obj = self.create_cat_obj()
         expected_data = self.obtain_expected_result(self.data, cat_obj)
         serializer = self.serializer_class(
             instance=cat_obj,
@@ -1016,6 +1106,7 @@ class CatSerializerTests(TestCase):
         )
         # To make sure that the adding of data is not valid
         self.assertFalse(serializer.is_valid())
+        
         # To make sure that all the not null field should
         # raise error
         self.assertSetEqual(
@@ -1029,6 +1120,22 @@ class CatSerializerTests(TestCase):
         )
         self.assertDictEqual(serializer.data, expected_data)
 
+
+class CatSerializerRetrieveTests(CatSerializerBaseTests):
+    def test_contains_expected_fields(self):
+        serializer = self.serializer_class(
+            data=self.data,
+            context=self.context
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+        
+        self.assertEqual(
+            set(serializer.data.keys()), 
+            set({'url', 'name', 'gender', 'date_of_birth', 
+                 'description', 'breed', 'owner', 'home'})
+        )
+
     def test_retrieve_cat_obj_one_by_one(self):
         # Create multiple cats object to retrieve
         cat_objs = CatFactory.create_batch(10)
@@ -1038,6 +1145,8 @@ class CatSerializerTests(TestCase):
                 instance=cat_obj,
                 context=self.context
             )
-            expected_data = self.obtain_expected_result(self.data, cat_obj)
             # Compare all the fields
-            self.assertDictEqual(serializer.data, expected_data)
+            self.assertDictEqual(
+                serializer.data, 
+                self.obtain_expected_result(self.data, cat_obj, read=True)
+            )
