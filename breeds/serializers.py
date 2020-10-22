@@ -28,7 +28,7 @@ class BreedSerializer(serializers.HyperlinkedModelSerializer):
             'owner', flat=True).distinct()
         # Retrieving all unique home among the owners
         homes = set(Home.objects.filter(
-            human__id__in=all_owners).values_list('id', flat=True))
+            human__id__in=all_owners).order_by('-id').values_list('id', flat=True))
         # Convert the retrieved home ids into hyperlinks
         result = [
             reverse('breeds:home-detail',
@@ -72,12 +72,6 @@ class CatSerializer(serializers.HyperlinkedModelSerializer):
         view_name="breeds:human-detail",
         queryset=Human.objects.all()
     )
-    '''
-    home = serializers.HyperlinkedRelatedField(
-        view_name='breeds:home-detail',
-        read_only=True
-    )
-    '''
     # Customize the method field to produce a hyperlink to the Home model
     # through the cat's owner (Human model)
     home = serializers.SerializerMethodField('get_cat_home')
