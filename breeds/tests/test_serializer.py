@@ -19,6 +19,16 @@ def make_request():
 
 
 class HomeSerializerBaseTests(TestCase):
+    '''
+    Test Case Code Format: #THS-X00
+
+    Where
+    =====            
+        X:  A - Add
+            M - Modify
+            R - Retrieve
+    '''
+    
     serializer_class = HomeSerializer
     list_url = vn.HOME_VIEW_LIST
     detail_url = vn.HOME_VIEW_DETAIL
@@ -80,6 +90,13 @@ class HomeSerializerBaseTests(TestCase):
 
 
 class HomeSerializerAddTests(HomeSerializerBaseTests):
+    '''
+    Test Case Code Format: #THS-A00
+
+    Test cases for adding a new home object through serializer
+    '''
+    
+    # Test Case: #THS-A01
     def test_add_home_obj(self):
         serializer = self.serializer_class(
             data=self.data,
@@ -93,6 +110,7 @@ class HomeSerializerAddTests(HomeSerializerBaseTests):
             self.obtain_expected_result(self.data, home_obj)
         )
 
+    # Test Case: #THS-A02
     def test_add_home_obj_with_invalid_data(self):
         serializer = self.serializer_class(
             data=self.invalid_data,
@@ -110,6 +128,7 @@ class HomeSerializerAddTests(HomeSerializerBaseTests):
         home = Home.objects.filter(**self.invalid_data)
         self.assertEqual(len(home), 0)  # Check that no result filtered
 
+    # Test Case: #THS-A03
     def test_add_home_obj_with_null_data(self):
         # Obtain the original number of Home objects
         num_of_obj = len(Home.objects.all())
@@ -132,6 +151,13 @@ class HomeSerializerAddTests(HomeSerializerBaseTests):
 
 
 class HomeSerializerModifyTests(HomeSerializerBaseTests):
+    '''
+    Test Case Code Format: #THS-M00
+
+    Test cases for modifying a new home object through serializer
+    '''
+    
+    # Test Case: #THS-M01
     def test_modify_home_obj(self):
         home_obj = HomeFactory.create(**self.data)
         serializer = self.serializer_class(
@@ -158,7 +184,8 @@ class HomeSerializerModifyTests(HomeSerializerBaseTests):
             serializer.data,
             self.obtain_expected_result(modified_data, home_obj)
         )
-
+        
+    # Test Case: #THS-M02
     def test_modify_home_obj_with_invalid_data(self):
         home_obj = HomeFactory.create(**self.data)
         # Retrieve the created home object
@@ -190,6 +217,7 @@ class HomeSerializerModifyTests(HomeSerializerBaseTests):
             self.obtain_expected_result(self.data, home_obj)
         )
 
+    # Test Case: #THS-M03
     def test_modify_home_obj_with_null_data(self):
         home_obj = HomeFactory.create(**self.data)
         serializer = self.serializer_class(
@@ -218,6 +246,13 @@ class HomeSerializerModifyTests(HomeSerializerBaseTests):
 
 
 class HomeSerializerRetrieveTests(HomeSerializerBaseTests):
+    '''
+    Test Case Code Format: #THS-R00
+
+    Test cases for retrieving home object through serializer
+    '''
+    
+    # Test Case: #THS-R01
     def test_contains_expected_fields(self):
         serializer = self.serializer_class(
             data=self.data,
@@ -229,7 +264,8 @@ class HomeSerializerRetrieveTests(HomeSerializerBaseTests):
             set({'url', 'name', 'address', 'hometype'}),
             set(serializer.data.keys())
         )
-
+        
+    # Test Case: #THS-R02
     def test_retrieve_home_obj_one_by_one(self):
         # Create multiple homes object to retrieve
         home_objs = HomeFactory.create_batch(10)
@@ -251,7 +287,17 @@ class HomeSerializerRetrieveTests(HomeSerializerBaseTests):
             )
 
 
-class BreedSerializerBaseTests(TestCase):
+class BreedSerializerBaseTests(TestCase):    
+    '''
+    Test Case Code Format: #TBS-X00
+
+    Where
+    =====            
+        X:  A - Add
+            M - Modify
+            R - Retrieve
+    '''
+    
     serializer_class = BreedSerializer
     list_url = vn.BREED_VIEW_LIST
     detail_url = vn.BREED_VIEW_DETAIL
@@ -326,6 +372,13 @@ class BreedSerializerBaseTests(TestCase):
 
 
 class BreedSerializerAddTests(BreedSerializerBaseTests):
+    '''
+    Test Case Code Format: #TBS-A00
+
+    Test cases for adding a breed object through serializer
+    '''
+    
+    # Test Case: #TBS-A01
     def test_add_breed_obj(self):
         num_of_obj = len(Breed.objects.all())
         serializer = self.serializer_class(
@@ -344,6 +397,7 @@ class BreedSerializerAddTests(BreedSerializerBaseTests):
         new_num_of_obj = len(Breed.objects.all())
         self.assertEqual(new_num_of_obj, num_of_obj + 1)
 
+    # Test Case: #TBS-A02
     def test_add_breed_obj_with_invalid_data(self):
         # Obtain the original number of Breed objects
         num_of_obj = len(Breed.objects.all())
@@ -367,6 +421,7 @@ class BreedSerializerAddTests(BreedSerializerBaseTests):
         new_num_of_obj = len(Breed.objects.all())
         self.assertEqual(new_num_of_obj, num_of_obj)
 
+    # Test Case: #TBS-A03
     def test_add_breed_obj_with_not_unique_name(self):
         # name field in the Breed model should be unique
         BreedFactory.create(name=self.data['name'])
@@ -389,6 +444,7 @@ class BreedSerializerAddTests(BreedSerializerBaseTests):
         new_num_of_obj = len(Breed.objects.all())
         self.assertEqual(new_num_of_obj, num_of_obj)
 
+    # Test Case: #TBS-A04
     def test_add_breed_obj_with_null_data(self):
         # Obtain the original number of Breed objects
         num_of_obj = len(Breed.objects.all())
@@ -409,6 +465,7 @@ class BreedSerializerAddTests(BreedSerializerBaseTests):
         new_num_of_obj = len(Breed.objects.all())
         self.assertEqual(new_num_of_obj, num_of_obj)
 
+    # Test Case: #TBS-A05
     def test_add_breed_obj_with_cats_obj(self):
         # add related cats objects to the breed object
         serializer = self.serializer_class(
@@ -429,6 +486,13 @@ class BreedSerializerAddTests(BreedSerializerBaseTests):
 
 
 class BreedSerializerModifyTests(BreedSerializerBaseTests):
+    '''
+    Test Case Code Format: #TBS-M00
+
+    Test cases for modifying a breed object through serializer
+    '''
+    
+    # Test Case: #TBS-M01
     def test_modify_breed_obj(self):
         breed_obj = BreedFactory.create(**self.data)
         serializer = self.serializer_class(
@@ -456,6 +520,7 @@ class BreedSerializerModifyTests(BreedSerializerBaseTests):
             self.obtain_expected_result(modified_data, breed_obj)
         )
 
+    # Test Case: #TBS-M02
     def test_modify_breed_obj_with_invalid_data(self):
         breed_obj = BreedFactory.create(**self.data)
         serializer = self.serializer_class(
@@ -486,6 +551,7 @@ class BreedSerializerModifyTests(BreedSerializerBaseTests):
             self.obtain_expected_result(self.data, breed_obj)
         )
 
+    # Test Case: #TBS-M03
     def test_modify_breed_obj_with_not_unique_name(self):
         breed_objs = BreedFactory.create_batch(2)
         # Update second breed object name same as first breed object
@@ -507,6 +573,7 @@ class BreedSerializerModifyTests(BreedSerializerBaseTests):
         breed = Breed.objects.filter(name=breed_objs[0].name)
         self.assertEqual(len(breed), 1)
 
+    # Test Case: #TBS-M04
     def test_modify_breed_obj_with_null_data(self):
         breed_obj = BreedFactory.create(**self.data)
         serializer = self.serializer_class(
@@ -535,6 +602,13 @@ class BreedSerializerModifyTests(BreedSerializerBaseTests):
 
 
 class BreedSerializerRetrieveTests(BreedSerializerBaseTests):
+    '''
+    Test Case Code Format: #TBS-R00
+
+    Test cases for retrieving breed object through serializer
+    '''
+    
+    # Test Case: #TBS-R01
     def test_contains_expected_fields(self):
         serializer = self.serializer_class(
             data=self.data,
@@ -549,6 +623,7 @@ class BreedSerializerRetrieveTests(BreedSerializerBaseTests):
             set({'url', 'name', 'origin', 'description', 'cats', 'homes'})
         )
 
+    # Test Case: #TBS-R02
     def test_retrieve_breed_obj_one_by_one(self):
         # Create multiple breeds object to retrieve
         breed_objs = BreedFactory.create_batch(10)
@@ -577,6 +652,16 @@ class BreedSerializerRetrieveTests(BreedSerializerBaseTests):
 
 
 class HumanSerializerBaseTests(TestCase):
+    '''
+    Test Case Code Format: #TPS-X00
+
+    Where
+    =====            
+        X:  A - Add
+            M - Modify
+            R - Retrieve
+    '''
+    
     serializer_class = HumanSerializer
     list_url = vn.HUMAN_VIEW_LIST
     detail_url = vn.HUMAN_VIEW_DETAIL
@@ -656,6 +741,13 @@ class HumanSerializerBaseTests(TestCase):
 
 
 class HumanSerializerAddTests(HumanSerializerBaseTests):
+    '''
+    Test Case Code Format: #TPS-A00
+
+    Test cases for adding a human object through serializer
+    '''
+    
+    # Test Case: #TPS-A01
     def test_add_human_obj(self):
         serializer = self.serializer_class(
             data=self.data,
@@ -669,6 +761,7 @@ class HumanSerializerAddTests(HumanSerializerBaseTests):
             self.obtain_expected_result(self.data, human_obj)
         )
 
+    # Test Case: #TPS-A02
     def test_add_human_obj_with_invalid_data(self):
         # Obtain the original number of Human objects
         num_of_obj = len(Human.objects.all())
@@ -688,6 +781,7 @@ class HumanSerializerAddTests(HumanSerializerBaseTests):
         new_num_of_obj = len(Human.objects.all())
         self.assertEqual(new_num_of_obj, num_of_obj)
 
+    # Test Case: #TPS-A03
     def test_add_human_obj_with_null_data(self):
         # Obtain the original number of Human objects
         num_of_obj = len(Human.objects.all())
@@ -708,6 +802,7 @@ class HumanSerializerAddTests(HumanSerializerBaseTests):
         new_num_of_obj = len(Human.objects.all())
         self.assertEqual(new_num_of_obj, num_of_obj)
 
+    # Test Case: #TPS-A04
     def test_add_human_obj_with_home_obj(self):
         # add related cats objects to the human object
         serializer = self.serializer_class(
@@ -724,6 +819,7 @@ class HumanSerializerAddTests(HumanSerializerBaseTests):
             self.obtain_expected_result(self.data, human_obj)
         )
 
+    # Test Case: #TPS-A05
     def test_add_human_obj_with_invalid_home_obj(self):
         # Obtain the original number of Human objects
         num_of_obj = len(Human.objects.all())
@@ -747,6 +843,13 @@ class HumanSerializerAddTests(HumanSerializerBaseTests):
 
 
 class HumanSerializerModifyTests(HumanSerializerBaseTests):
+    '''
+    Test Case Code Format: #TPS-M00
+
+    Test cases for modifying a human object through serializer
+    '''
+    
+    # Test Case: #TPS-M01
     def test_modify_human_obj(self):
         human_obj = self.create_human_obj()
         serializer = self.serializer_class(
@@ -777,6 +880,7 @@ class HumanSerializerModifyTests(HumanSerializerBaseTests):
             self.obtain_expected_result(modified_data, human_obj)
         )
 
+    # Test Case: #TPS-M02
     def test_modify_human_obj_with_invalid_data(self):
         human_obj = self.create_human_obj()
         expected_data = self.obtain_expected_result(self.data, human_obj)
@@ -805,6 +909,7 @@ class HumanSerializerModifyTests(HumanSerializerBaseTests):
         )
         self.assertDictEqual(serializer.data, expected_data)
 
+    # Test Case: #TPS-M03
     def test_modify_human_obj_with_null_data(self):
         human_obj = self.create_human_obj()
         expected_data = self.obtain_expected_result(self.data, human_obj)
@@ -830,6 +935,13 @@ class HumanSerializerModifyTests(HumanSerializerBaseTests):
 
 
 class HumanSerializerRetrieveTests(HumanSerializerBaseTests):
+    '''
+    Test Case Code Format: #TPS-R00
+
+    Test cases for retrieving human object through serializer
+    '''
+    
+    # Test Case: #TPS-R01
     def test_contains_expected_fields(self):
         serializer = self.serializer_class(
             data=self.data,
@@ -844,6 +956,7 @@ class HumanSerializerRetrieveTests(HumanSerializerBaseTests):
                  'description', 'home', 'cats'})
         )
 
+    # Test Case: #TPS-R02
     def test_retrieve_human_obj_one_by_one(self):
         # Create multiple humans object to retrieve
         human_objs = HumanFactory.create_batch(10)
@@ -872,6 +985,16 @@ class HumanSerializerRetrieveTests(HumanSerializerBaseTests):
 
 
 class CatSerializerBaseTests(TestCase):
+    '''
+    Test Case Code Format: #TCS-X00
+
+    Where
+    =====            
+        X:  A - Add
+            M - Modify
+            R - Retrieve
+    '''
+    
     serializer_class = CatSerializer
     list_url = vn.CAT_VIEW_LIST
     detail_url = vn.CAT_VIEW_DETAIL
@@ -958,6 +1081,13 @@ class CatSerializerBaseTests(TestCase):
 
 
 class CatSerializerAddTests(CatSerializerBaseTests):
+    '''
+    Test Case Code Format: #TCS-A00
+
+    Test cases for adding a cat object through serializer
+    '''
+    
+    # Test Case: #TCS-A01
     def test_add_cat_obj(self):
         serializer = self.serializer_class(
             data=self.data,
@@ -971,6 +1101,7 @@ class CatSerializerAddTests(CatSerializerBaseTests):
             self.obtain_expected_result(self.data, cat_obj)
         )
 
+    # Test Case: #TCS-A02
     def test_add_cat_obj_with_invalid_data(self):
         # Obtain the original number of Cat objects
         num_of_obj = len(Cat.objects.all())
@@ -991,6 +1122,7 @@ class CatSerializerAddTests(CatSerializerBaseTests):
         new_num_of_obj = len(Cat.objects.all())
         self.assertEqual(new_num_of_obj, num_of_obj)
 
+    # Test Case: #TCS-A03
     def test_add_cat_obj_with_null_data(self):
         # Obtain the original number of Cat objects
         num_of_obj = len(Cat.objects.all())
@@ -1011,6 +1143,7 @@ class CatSerializerAddTests(CatSerializerBaseTests):
         new_num_of_obj = len(Cat.objects.all())
         self.assertEqual(new_num_of_obj, num_of_obj)
 
+    # Test Case: #TCS-A04
     def test_add_cat_obj_with_invalid_breed_and_human_obj(self):
         # Obtain the original number of Cat objects
         num_of_obj = len(Cat.objects.all())
@@ -1037,6 +1170,13 @@ class CatSerializerAddTests(CatSerializerBaseTests):
 
 
 class CatSerializerModifyTests(CatSerializerBaseTests):
+    '''
+    Test Case Code Format: #TCS-M00
+
+    Test cases for modifying a cat object through serializer
+    '''
+    
+    # Test Case: #TCS-M01
     def test_modify_cat_obj(self):
         cat_obj = self.create_cat_obj()
         serializer = self.serializer_class(
@@ -1067,6 +1207,7 @@ class CatSerializerModifyTests(CatSerializerBaseTests):
             self.obtain_expected_result(modified_data, cat_obj)
         )
 
+    # Test Case: #TCS-M02
     def test_modify_cat_obj_with_invalid_data(self):
         cat_obj = self.create_cat_obj()
         expected_data = self.obtain_expected_result(self.data, cat_obj)
@@ -1096,6 +1237,7 @@ class CatSerializerModifyTests(CatSerializerBaseTests):
         )
         self.assertDictEqual(serializer.data, expected_data)
 
+    # Test Case: #TCS-M03
     def test_modify_cat_obj_with_null_data(self):
         cat_obj = self.create_cat_obj()
         expected_data = self.obtain_expected_result(self.data, cat_obj)
@@ -1121,7 +1263,14 @@ class CatSerializerModifyTests(CatSerializerBaseTests):
         self.assertDictEqual(serializer.data, expected_data)
 
 
-class CatSerializerRetrieveTests(CatSerializerBaseTests):
+class CatSerializerRetrieveTests(CatSerializerBaseTests):    
+    '''
+    Test Case Code Format: #TCS-R00
+
+    Test cases for retrieving cat object through serializer
+    '''
+    
+    # Test Case: #TCS-R01
     def test_contains_expected_fields(self):
         serializer = self.serializer_class(
             data=self.data,
@@ -1136,6 +1285,7 @@ class CatSerializerRetrieveTests(CatSerializerBaseTests):
                  'description', 'breed', 'owner', 'home'})
         )
 
+    # Test Case: #TCS-R02
     def test_retrieve_cat_obj_one_by_one(self):
         # Create multiple cats object to retrieve
         cat_objs = CatFactory.create_batch(10)
