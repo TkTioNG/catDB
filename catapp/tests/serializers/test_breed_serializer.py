@@ -1,20 +1,12 @@
 import factory
 from django.test import TestCase
-from rest_framework.test import APIRequestFactory
 from rest_framework.reverse import reverse
 
-from catapp.serializers import (
-    BreedSerializer
-)
-from catapp.factories import (
-    BreedFactory, CatFactory
-)
+from catapp.serializers import BreedSerializer
+from catapp.factories import BreedFactory, CatFactory
 from catapp.models import Breed, Cat
 from catapp.tests.base import convert_id_to_hyperlink, ViewName as vn
-
-
-def make_request():
-    return APIRequestFactory().get('/')
+from catapp.tests.serializers.base import make_request
 
 
 class BreedSerializerBaseTests(TestCase):
