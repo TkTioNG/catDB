@@ -1,8 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views
+from catapp import views
 
-app_name = 'breeds'
+app_name = 'catapp'
 
 router = DefaultRouter()
 router.register(r'breeds', views.BreedViewSet)

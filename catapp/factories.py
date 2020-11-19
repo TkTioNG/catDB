@@ -2,7 +2,7 @@ import factory
 import datetime
 from faker import Factory
 
-from .models import Breed, Cat, Home, Human, Gender
+from catapp.models import Breed, Cat, Home, Human, Gender
 
 faker = Factory.create()
 
@@ -16,7 +16,7 @@ class HomeFactory(factory.django.DjangoModelFactory):
     # address = factory.Faker('address')
     address = factory.LazyAttribute(lambda n: faker.address()[:300])
     hometype = factory.Iterator(Home.HomeType.choices, getter=lambda c: c[0])
-    
+
     @classmethod
     def _setup_next_sequence(cls):
         try:

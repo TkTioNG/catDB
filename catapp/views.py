@@ -8,10 +8,10 @@ from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
-from breeds.serializers import (BreedSerializer, CatSerializer,
-                          HomeSerializer, HumanSerializer)
-from breeds.models import Breed, Cat, Home, Human
-from breeds.authentication import EXPIRING_HOUR
+from catapp.serializers import (BreedSerializer, CatSerializer,
+                                HomeSerializer, HumanSerializer)
+from catapp.models import Breed, Cat, Home, Human
+from catapp.authentication import EXPIRING_HOUR
 
 
 class HomeViewSet(viewsets.ModelViewSet):

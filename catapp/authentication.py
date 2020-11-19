@@ -1,5 +1,6 @@
 from datetime import timedelta
 from django.utils import timezone
+from django.conf import settings
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.authtoken.models import Token
@@ -22,7 +23,7 @@ class ExpiringTokenAuthentication(TokenAuthentication):
         if not token.user.is_active:
             raise AuthenticationFailed("User is inactive")
 
-        if timezone.now() - token.created > timedelta(hours=EXPIRING_HOUR):
+        if timezone.now() - token.created > timedelta(hours=settings.AUTH_TOKEN_EXPIRING_HOURS):
             raise AuthenticationFailed("Token has expired")
 
         return (token.user, token)

@@ -4,16 +4,16 @@ import factory
 import requests
 from datetime import timedelta
 from django.utils import timezone
+from django.conf import settings
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.reverse import reverse
 from rest_framework.authtoken.models import Token
 
-from breeds.models import Breed, Cat, Home, Human
-from breeds.factories import BreedFactory, CatFactory, HomeFactory, HumanFactory
-from breeds.authentication import EXPIRING_HOUR
-from .base import convert_id_to_hyperlink, ViewName as vn
+from catapp.models import Breed, Cat, Home, Human
+from catapp.factories import BreedFactory, CatFactory, HomeFactory, HumanFactory
+from catapp.tests.base import convert_id_to_hyperlink, ViewName as vn
 
 
 BASE_URL = "http://testserver"
@@ -44,7 +44,7 @@ def get_expired_token_key():
     expired_token = create_token()
     # Expiring the token manually
     expired_token.created = timezone.now() \
-        - timedelta(hours=EXPIRING_HOUR, seconds=1)
+        - timedelta(hours=settings.AUTH_TOKEN_EXPIRING_HOURS, seconds=1)
     expired_token.save()
     return get_token_key_header(expired_token.key)
 
@@ -243,7 +243,7 @@ class HomeViewSetAddTests(HomeViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#THV-A04: Home object is accidentally added to total count"
         )
-    
+
     # Test Case: #THV-A05
     def test_add_home_obj_in_wrong_url(self):
         num_of_home_obj = self.get_num_of_obj(self.list_url)
@@ -268,11 +268,11 @@ class HomeViewSetAddTests(HomeViewSetBaseTests):
             new_num_of_home_obj, num_of_home_obj,
             "#THV-A05: Home object is accidentally added to home total count"
         )
-        
+
     # Test Case: #THV-A06
     def test_add_home_obj_with_invalid_data(self):
         num_of_home_obj = self.get_num_of_obj(self.list_url)
-        
+
         # Generate Breed data as invalid data for Home instance
         invalid_data = factory.build(dict, FACTORY_CLASS=BreedFactory)
         response = self.add_obj(
@@ -288,7 +288,7 @@ class HomeViewSetAddTests(HomeViewSetBaseTests):
         self.assertEqual(
             new_num_of_home_obj, num_of_home_obj,
             "#THV-A06: Home object is accidentally added to total count"
-        )    
+        )
 
 
 class HomeViewSetDeleteTests(HomeViewSetBaseTests):
@@ -378,12 +378,12 @@ class HomeViewSetDeleteTests(HomeViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#THV-D04: Total no. of objects is unexpectedly reduced"
         )
-    
+
     # Test Case: #THV-D05
     def test_remove_not_existing_home_obj(self):
         HomeFactory.create_batch(10)
         num_of_obj = self.get_num_of_obj(self.list_url)
-        
+
         response = self.remove_obj(
             url=self.detail_url,
             data=None,
@@ -403,13 +403,13 @@ class HomeViewSetDeleteTests(HomeViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#THV-D05: Total no. of objects is unexpectedly reduced"
         )
-        
+
     # Test Case: #THV-D06
     def test_remove_home_obj_in_wrong_url(self):
         home_obj = self.create_home_obj()
         num_of_obj = self.get_num_of_obj(self.list_url)
         num_of_cat_obj = self.get_num_of_obj(vn.CAT_VIEW_LIST)
-        
+
         # Attempt to delete home instance in cat endpoint
         response = self.remove_obj(
             url=vn.CAT_VIEW_DETAIL,
@@ -502,12 +502,12 @@ class HomeViewSetModifyTests(HomeViewSetBaseTests):
         self.assertEqual(
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#THV-M04: Able to modify home object without token"
-        )        
-        
+        )
+
     # Test Case: #THV-M05
     def test_modify_home_obj_with_invalid_data(self):
         home_obj = self.create_home_obj()
-        
+
         # Generate Breed data as invalid data for Home instance
         invalid_data = factory.build(dict, FACTORY_CLASS=BreedFactory)
         response = self.modify_obj(
@@ -618,7 +618,7 @@ class HomeViewSetRetrieveTests(HomeViewSetBaseTests):
             response.json(), self.get_home_obj_url(self.data),
             "#THV-R01: Retrieve data is not same as the posted data"
         )
-        
+
     # Test Case: #THV-R02
     def test_retrieve_multiple_home_obj(self):
         home_objs = HomeFactory.create_batch(10)
@@ -634,6 +634,7 @@ class HomeViewSetRetrieveTests(HomeViewSetBaseTests):
             json_data['count'], 10,
             "#THV-R02: Total count of home object is not correct"
         )
+
 
 class BreedViewSetBaseTests(BaseTestCase):
     '''
@@ -658,12 +659,12 @@ class BreedViewSetBaseTests(BaseTestCase):
 
     def create_breed_obj(self):
         return BreedFactory.create(**self.data)
-    
+
     def get_breed_obj_url(self, data: dict):
         # Add url (hyperlink) from the breed object id to the dict object
         breed_obj = Breed.objects.latest('pk')
         data['url'] = convert_id_to_hyperlink(vn.BREED_VIEW_DETAIL, breed_obj)
-        
+
         try:
             data['cats'] = []
             data['homes'] = []
@@ -673,7 +674,8 @@ class BreedViewSetBaseTests(BaseTestCase):
                     convert_id_to_hyperlink(vn.CAT_VIEW_DETAIL, cat)
                 )
                 data['homes'].append(
-                    convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL, cat.owner.home)
+                    convert_id_to_hyperlink(
+                        vn.HOME_VIEW_DETAIL, cat.owner.home)
                 )
         except Cat.DoesNotExist:
             data['cats'] = []
@@ -762,7 +764,7 @@ class BreedViewSetAddTests(BreedViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#TBV-A04: Breed object is accidentally added to total count"
         )
-        
+
     # Test Case: #TBV-A05
     def test_add_breed_obj_in_wrong_url(self):
         num_of_breed_obj = self.get_num_of_obj(self.list_url)
@@ -787,11 +789,11 @@ class BreedViewSetAddTests(BreedViewSetBaseTests):
             new_num_of_home_obj, num_of_home_obj,
             "#TBV-A05: Breed object is accidentally added to home total count"
         )
-        
+
     # Test Case: #TBV-A06
     def test_add_breed_obj_with_invalid_data(self):
         num_of_breed_obj = self.get_num_of_obj(self.list_url)
-        
+
         # Generate Home data as invalid data for Breed instance
         invalid_data = factory.build(dict, FACTORY_CLASS=HomeFactory)
         response = self.add_obj(
@@ -807,8 +809,8 @@ class BreedViewSetAddTests(BreedViewSetBaseTests):
         self.assertEqual(
             new_num_of_breed_obj, num_of_breed_obj,
             "#TBV-A06: Breed object is accidentally added to total count"
-        )  
-        
+        )
+
 
 class BreedViewSetDeleteTests(BreedViewSetBaseTests):
     '''
@@ -895,12 +897,12 @@ class BreedViewSetDeleteTests(BreedViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#TBV-D04: Total count of Breed object is unexpectedly reduced"
         )
-        
+
     # Test Case: #TBV-D05
     def test_remove_not_existing_breed_obj(self):
         breed_obj = self.create_breed_obj()
         num_of_obj = self.get_num_of_obj(self.list_url)
-        
+
         response = self.remove_obj(
             url=self.detail_url,
             data=None,
@@ -920,13 +922,13 @@ class BreedViewSetDeleteTests(BreedViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#TBV-D05: Total no. of objects is unexpectedly reduced"
         )
-        
+
     # Test Case: #TBV-D06
     def test_remove_breed_obj_in_wrong_url(self):
         breed_obj = self.create_breed_obj()
         num_of_obj = self.get_num_of_obj(self.list_url)
         num_of_cat_obj = self.get_num_of_obj(vn.CAT_VIEW_LIST)
-        
+
         # Attempt to delete breed instance in cat endpoint
         response = self.remove_obj(
             url=vn.CAT_VIEW_DETAIL,
@@ -952,7 +954,6 @@ class BreedViewSetDeleteTests(BreedViewSetBaseTests):
             new_num_of_cat_obj, num_of_cat_obj,
             "#TBV-D06: Total no. of objects is unexpectedly reduced"
         )
-
 
 
 class BreedViewSetModifyTests(BreedViewSetBaseTests):
@@ -1020,11 +1021,11 @@ class BreedViewSetModifyTests(BreedViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TBV-M04: Able to modify breed object without token"
         )
-        
+
     # Test Case: #TBV-M05
     def test_modify_breed_obj_with_invalid_data(self):
         breed_obj = self.create_breed_obj()
-        
+
         # Generate Home data as invalid data for Breed instance
         invalid_data = factory.build(dict, FACTORY_CLASS=HomeFactory)
         response = self.modify_obj(
@@ -1136,7 +1137,7 @@ class BreedViewSetRetrieveTests(BreedViewSetBaseTests):
             response.json(), self.get_breed_obj_url(self.data),
             "#TBV-R01: Retrieve data is not same as the posted data"
         )
-        
+
     # Test Case: #TBV-R02
     def test_retrieve_multiple_breed_obj(self):
         breed_objs = BreedFactory.create_batch(10)
@@ -1185,7 +1186,7 @@ class HumanViewSetBaseTests(BaseTestCase):
     def parse_obj(self, *dicts):
         for d in dicts:
             # convert FK to hyperlink
-            d['home'] = convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL, 
+            d['home'] = convert_id_to_hyperlink(vn.HOME_VIEW_DETAIL,
                                                 d['home'])
             # convert datetime object into str, default format(yyyy-mm-dd)
             d['date_of_birth'] = str(d['date_of_birth'])
@@ -1194,12 +1195,12 @@ class HumanViewSetBaseTests(BaseTestCase):
         data = self.data.copy()
         data['home'] = self.home
         return HumanFactory.create(**data)
-    
+
     def get_human_obj_url(self, data: dict):
         # Add url (hyperlink) from the human object id to the dict object
         human_obj = Human.objects.latest('pk')
         data['url'] = convert_id_to_hyperlink(vn.HUMAN_VIEW_DETAIL, human_obj)
-        
+
         try:
             data['cats'] = []
             cats = Cat.objects.filter(owner=human_obj)
@@ -1289,7 +1290,7 @@ class HumanViewSetAddTests(HumanViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#TPV-A04: Invalid object is accidentally added to total count"
         )
-        
+
     # Test Case: #TPV-A05
     def test_add_human_obj_in_wrong_url(self):
         num_of_human_obj = self.get_num_of_obj(self.list_url)
@@ -1314,11 +1315,11 @@ class HumanViewSetAddTests(HumanViewSetBaseTests):
             new_num_of_home_obj, num_of_home_obj,
             "#TPV-A05: Human object is accidentally added to home total count"
         )
-        
+
     # Test Case: #TPV-A06
     def test_add_human_obj_with_invalid_data(self):
         num_of_human_obj = self.get_num_of_obj(self.list_url)
-        
+
         # Generate Home data as invalid data for Human instance
         invalid_data = factory.build(dict, FACTORY_CLASS=HomeFactory)
         response = self.add_obj(
@@ -1334,8 +1335,7 @@ class HumanViewSetAddTests(HumanViewSetBaseTests):
         self.assertEqual(
             new_num_of_human_obj, num_of_human_obj,
             "#TPV-A06: Human object is accidentally added to total count"
-        )  
-       
+        )
 
 
 class HumanViewSetDeleteTests(HumanViewSetBaseTests):
@@ -1423,12 +1423,12 @@ class HumanViewSetDeleteTests(HumanViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#TPV-D04: Total count of Human object is unexpectedly reduced"
         )
-        
+
     # Test Case: #TPV-D05
     def test_remove_not_existing_human_obj(self):
         human_obj = self.create_human_obj()
         num_of_obj = self.get_num_of_obj(self.list_url)
-        
+
         response = self.remove_obj(
             url=self.detail_url,
             data=None,
@@ -1448,13 +1448,13 @@ class HumanViewSetDeleteTests(HumanViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#TPV-D05: Total no. of objects is unexpectedly reduced"
         )
-        
+
     # Test Case: #TPV-D06
     def test_remove_human_obj_in_wrong_url(self):
         human_obj = self.create_human_obj()
         num_of_obj = self.get_num_of_obj(self.list_url)
         num_of_cat_obj = self.get_num_of_obj(vn.CAT_VIEW_LIST)
-        
+
         # Attempt to delete human instance in cat endpoint
         response = self.remove_obj(
             url=vn.CAT_VIEW_DETAIL,
@@ -1548,11 +1548,11 @@ class HumanViewSetModifyTests(HumanViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TPV-M04: Able to modify human object without token"
         )
-        
+
     # Test Case: #TPV-M05
     def test_modify_human_obj_with_invalid_data(self):
         human_obj = self.create_human_obj()
-        
+
         # Generate Breed data as invalid data for Human instance
         invalid_data = factory.build(dict, FACTORY_CLASS=BreedFactory)
         response = self.modify_obj(
@@ -1664,7 +1664,7 @@ class HumanViewSetRetrieveTests(HumanViewSetBaseTests):
             response.json(), self.get_human_obj_url(self.data),
             "#TPV-R01: Retrieve data is not same as the posted data"
         )
-        
+
     # Test Case: #TPV-R02
     def test_retrieve_multiple_human_obj(self):
         human_objs = HumanFactory.create_batch(10)
@@ -1719,9 +1719,9 @@ class CatViewSetBaseTests(BaseTestCase):
     def parse_obj(self, *dicts):
         for d in dicts:
             # convert FKs to hyperlinks
-            d['breed'] = convert_id_to_hyperlink(vn.BREED_VIEW_DETAIL, 
+            d['breed'] = convert_id_to_hyperlink(vn.BREED_VIEW_DETAIL,
                                                  d['breed'])
-            d['owner'] = convert_id_to_hyperlink(vn.HUMAN_VIEW_DETAIL, 
+            d['owner'] = convert_id_to_hyperlink(vn.HUMAN_VIEW_DETAIL,
                                                  d['owner'])
             # convert datetime object into str, default format(yyyy-mm-dd)
             d['date_of_birth'] = str(d['date_of_birth'])
@@ -1731,7 +1731,7 @@ class CatViewSetBaseTests(BaseTestCase):
         data['breed'] = self.breed
         data['owner'] = self.owner
         return CatFactory.create(**data)
-    
+
     def get_cat_obj_url(self, data: dict):
         # Add url (hyperlink) from the cat object id to the dict object
         cat_obj = Cat.objects.latest('pk')
@@ -1826,7 +1826,7 @@ class CatViewSetAddTests(CatViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#TCV-A04: Invalid object is accidentally added to total count"
         )
-        
+
     # Test Case: #TCV-A05
     def test_add_cat_obj_in_wrong_url(self):
         num_of_cat_obj = self.get_num_of_obj(self.list_url)
@@ -1851,11 +1851,11 @@ class CatViewSetAddTests(CatViewSetBaseTests):
             new_num_of_cat_obj, num_of_cat_obj,
             "#TCV-A05: Cat object is accidentally added to cat total count"
         )
-        
+
     # Test Case: #TCV-A06
     def test_add_cat_obj_with_invalid_data(self):
         num_of_cat_obj = self.get_num_of_obj(self.list_url)
-        
+
         # Generate Breed data as invalid data for Cat instance
         invalid_data = factory.build(dict, FACTORY_CLASS=BreedFactory)
         response = self.add_obj(
@@ -1871,7 +1871,7 @@ class CatViewSetAddTests(CatViewSetBaseTests):
         self.assertEqual(
             new_num_of_cat_obj, num_of_cat_obj,
             "#TCV-A06: Cat object is accidentally added to total count"
-        )   
+        )
 
 
 class CatViewSetDeleteTests(CatViewSetBaseTests):
@@ -1900,9 +1900,9 @@ class CatViewSetDeleteTests(CatViewSetBaseTests):
             new_num_of_obj, num_of_obj - 1,
             "#TCV-D01: Total count of Cat object is not reduced"
         )
-        
 
     # Test Case: #TCV-D02
+
     def test_remove_cat_obj_with_expired_token(self):
         cat_obj = self.create_cat_obj()
         num_of_obj = self.get_num_of_obj(self.list_url)
@@ -1960,12 +1960,12 @@ class CatViewSetDeleteTests(CatViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#TCV-D04: Total count of Cat object is unexpectedly reduced"
         )
-        
+
     # Test Case: #TCV-D05
     def test_remove_not_existing_cat_obj(self):
         CatFactory.create_batch(10)
         num_of_obj = self.get_num_of_obj(self.list_url)
-        
+
         response = self.remove_obj(
             url=self.detail_url,
             data=None,
@@ -1985,12 +1985,12 @@ class CatViewSetDeleteTests(CatViewSetBaseTests):
             new_num_of_obj, num_of_obj,
             "#TCV-D05: Total no. of objects is unexpectedly reduced"
         )
-        
+
     # Test Case: #TCV-D06
     def test_remove_cat_obj_with_wrong_pk(self):
         cat_obj = self.create_cat_obj()
         num_of_obj = self.get_num_of_obj(self.list_url)
-        
+
         response = self.remove_obj(
             url=vn.BREED_VIEW_DETAIL,
             data=self.data,
@@ -2074,11 +2074,11 @@ class CatViewSetModifyTests(CatViewSetBaseTests):
             response.status_code, status.HTTP_401_UNAUTHORIZED,
             "#TCV-M04: Able to modify cat object without token"
         )
-        
+
     # Test Case: #TCV-M05
     def test_modify_cat_obj_with_invalid_data(self):
         cat_obj = self.create_cat_obj()
-        
+
         # Generate Breed data as invalid data for Cat instance
         invalid_data = factory.build(dict, FACTORY_CLASS=BreedFactory)
         response = self.modify_obj(
@@ -2189,7 +2189,7 @@ class CatViewSetRetrieveTests(CatViewSetBaseTests):
             response.json(), self.get_cat_obj_url(self.data),
             "#TCV-R01: Retrieve data is not same as the posted data"
         )
-        
+
     # Test Case: #TCV-R02
     def test_retrieve_multiple_cat_obj(self):
         cat_objs = CatFactory.create_batch(10)

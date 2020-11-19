@@ -1,10 +1,10 @@
 from rest_framework import serializers
 from rest_framework.reverse import reverse
-from .models import Breed, Cat, Home, Human
+from catapp.models import Breed, Cat, Home, Human
 
 
 class HomeSerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="breeds:home-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="catapp:home-detail")
 
     class Meta:
         model = Home
@@ -12,11 +12,11 @@ class HomeSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class BreedSerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="breeds:breed-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="catapp:breed-detail")
     cats = serializers.HyperlinkedRelatedField(
         many=True,
         read_only=True,
-        view_name='breeds:cat-detail'
+        view_name='catapp:cat-detail'
     )
     # Customize the method field to produce a list of hyperlinks
     # to the Home model through the cat's owner (Human model)
@@ -31,7 +31,7 @@ class BreedSerializer(serializers.HyperlinkedModelSerializer):
             human__id__in=all_owners).order_by('-id').values_list('id', flat=True))
         # Convert the retrieved home ids into hyperlinks
         result = [
-            reverse('breeds:home-detail',
+            reverse('catapp:home-detail',
                     args=[home_id], request=self.context['request'])
             for home_id in homes
         ]
@@ -43,15 +43,15 @@ class BreedSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class HumanSerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="breeds:human-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="catapp:human-detail")
     home = serializers.HyperlinkedRelatedField(
-        view_name='breeds:home-detail',
+        view_name='catapp:home-detail',
         queryset=Home.objects.all()
     )
     cats = serializers.HyperlinkedRelatedField(
         many=True,
         read_only=True,
-        view_name='breeds:cat-detail',
+        view_name='catapp:cat-detail',
     )
 
     class Meta:
@@ -63,13 +63,13 @@ class CatSerializer(serializers.HyperlinkedModelSerializer):
     """
     Expose home of the cat in the serializer
     """
-    url = serializers.HyperlinkedIdentityField(view_name="breeds:cat-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="catapp:cat-detail")
     breed = serializers.HyperlinkedRelatedField(
-        view_name="breeds:breed-detail",
+        view_name="catapp:breed-detail",
         queryset=Breed.objects.all()
     )
     owner = serializers.HyperlinkedRelatedField(
-        view_name="breeds:human-detail",
+        view_name="catapp:human-detail",
         queryset=Human.objects.all()
     )
     # Customize the method field to produce a hyperlink to the Home model
@@ -81,7 +81,7 @@ class CatSerializer(serializers.HyperlinkedModelSerializer):
         # and Human-Home is Many-to-One relationship, hence one cat
         # will only has one home related to it
         cat_home = Human.objects.get(id=obj.owner_id).home_id
-        result = reverse('breeds:home-detail',
+        result = reverse('catapp:home-detail',
                          args=[cat_home], request=self.context['request'])
         return result
 
