@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'breeds.apps.BreedsConfig',
+    'catapp.apps.CatappConfig',
     'rest_framework',
     'rest_framework.authtoken',
     'django_filters',
@@ -127,7 +127,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         # 'rest_framework.authentication.TokenAuthentication',
         # Customized Expiring Token Authentication
-        'breeds.authentication.ExpiringTokenAuthentication',
+        'catapp.authentication.ExpiringTokenAuthentication',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
@@ -136,3 +136,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
     ],
 }
+
+
+# Used for token authentication for catapp
+AUTH_TOKEN_EXPIRING_HOURS = 24
