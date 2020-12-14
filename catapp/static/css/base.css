@@ -1,0 +1,12 @@
+.content {
+  margin-top: 10px;
+}
+
+.table {
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.alert {
+  clear: both;
+}

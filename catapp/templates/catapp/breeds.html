@@ -1,0 +1,114 @@
+{% extends "catapp/base.html" %} 
+
+{% block content %} 
+
+<h3>Breed List</h3>
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item active" aria-current="page">
+    Below shows all the breeds available for the cats.
+    </li>
+  </ol>
+</nav>
+
+{% if success %}
+  <div id="successModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Breed Details</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>The new breed is successfully added to the database.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    $(document).ready(function(){
+        $("#successModal").modal('show');
+    });
+  </script>
+{% endif %}
+
+{% if errors %}
+    <div class="alert alert-danger" role="alert">
+      {{errors}}
+    </div>
+{% endif %}
+
+{% if form %}
+  <button type="button" class="btn btn-primary" style="float: right; margin-bottom: 10px;" data-toggle="modal" data-target="#addBreedModal">
+    Add New Breed
+  </button>
+  <div id="addBreedModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Breed Details</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form action="{% url 'catapp:breeds' %}" method="post">
+            {% csrf_token %}
+            {{ form }}
+            <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Add</button>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if breeds %}
+  {% if breeds|length > 0 %}
+    <table class="table table-striped">
+      <thead class="thead-dark">
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Breed Name</th>
+          <th scope="col">Origin</th>
+          <th scope="col">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for breed in breeds %}
+        <tr>
+          <th scope="row">{{ forloop.counter }}</th>
+          <td>{{ breed.name }}</td>
+          <td>{{ breed.origin }}</td>
+          <td>{{ breed.description }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="alert alert-secondary" role="alert">
+      No breeds are available.
+    </div>
+  {% endif %}
+{% else %}
+  {% if errors %}
+    <div class="alert alert-danger" role="alert">
+      {{errors}}
+    </div>
+  {% else %}
+    <div class="alert alert-secondary" role="alert">
+      No breeds are available.
+    </div>
+  {% endif %}
+{% endif %}
+
+{% endblock %}

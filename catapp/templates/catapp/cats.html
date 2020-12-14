@@ -1,0 +1,123 @@
+{% extends "catapp/base.html" %} 
+
+{% load static %}
+
+{% block content %} 
+
+<script src="{% static 'js/form.js' %}"></script>
+
+<h3>Cat List</h3>
+{% if not errors %}
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item active" aria-current="page">
+      Below shows all the cat available in the database.
+      </li>
+    </ol>
+  </nav>
+{% endif %}
+
+{% if success %}
+  <div id="successModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Cat Details</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>The new cat is successfully added to the database.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    $(document).ready(function(){
+        $("#successModal").modal('show');
+    });
+  </script>
+{% endif %}
+
+{% if errors %}
+    <div class="alert alert-danger" role="alert">
+      {{errors}}
+    </div>
+{% endif %}
+
+{% if form %}
+  <button type="button" class="btn btn-primary" style="float: right; margin-bottom: 10px;" data-toggle="modal" data-target="#addCatModal">
+    Add New Cat
+  </button>
+  <div id="addCatModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Cat Details</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form action="{% url 'catapp:cats' %}" method="post">
+            {% csrf_token %}
+            {{ form }}
+            <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Add</button>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if cats %}
+  {% if cats|length > 0 %}
+    <table class="table table-striped">
+      <thead class="thead-dark">
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Cat Name</th>
+          <th scope="col">Gender</th>
+          <th scope="col">Date of birth</th>
+          <th scope="col">Breed</th>
+          <th scope="col">Owner</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for cat in cats %}
+        <tr>
+          <th scope="row">{{ forloop.counter }}</th>
+          <td>{{ cat.name }}</td>
+          <td>{{ cat.gender }}</td>
+          <td>{{ cat.date_of_birth }}</td>
+          <td>{{ cat.breed }}</td>
+          <td>{{ cat.owner }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="alert alert-secondary" role="alert">
+      No cats are available.
+    </div>
+  {% endif %}
+{% else %}
+  {% if errors %}
+    <div class="alert alert-danger" role="alert">
+      {{errors}}
+    </div>
+  {% else %}
+    <div class="alert alert-secondary" role="alert">
+      No cats are available.
+    </div>
+  {% endif %}
+{% endif %}
+
+{% endblock %}

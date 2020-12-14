@@ -38,6 +38,7 @@ class Home(models.Model):
 
     class Meta:
         ordering = ['-id']
+        db_table = "%s_%s" % ("catapp", "home")
 
 
 class Breed(models.Model):
@@ -56,6 +57,7 @@ class Breed(models.Model):
 
     class Meta:
         ordering = ['name']
+        db_table = "%s_%s" % ("catapp", "breed")
 
 
 class Human(models.Model):
@@ -80,6 +82,7 @@ class Human(models.Model):
 
     class Meta:
         ordering = ['name']
+        db_table = "%s_%s" % ("catapp", "human")
 
 
 class Cat(models.Model):
@@ -107,3 +110,4 @@ class Cat(models.Model):
 
     class Meta:
         ordering = ['name']
+        db_table = "%s_%s" % ("catapp", "cat")

@@ -25,14 +25,21 @@ class BreedSerializer(serializers.HyperlinkedModelSerializer):
     def get_breed_homes(self, obj):
         # Retrieving all unique owners whose cat's is the current breed type
         all_owners = Cat.objects.filter(breed=obj.id).values_list(
-            'owner', flat=True).distinct()
+            'owner', flat=True
+        ).distinct()
         # Retrieving all unique home among the owners
-        homes = set(Home.objects.filter(
-            human__id__in=all_owners).order_by('-id').values_list('id', flat=True))
+        homes = set(
+            Home.objects.filter(human__id__in=all_owners)
+            .order_by('-id')
+            .values_list('id', flat=True)
+        )
         # Convert the retrieved home ids into hyperlinks
         result = [
-            reverse('catapp:home-detail',
-                    args=[home_id], request=self.context['request'])
+            reverse(
+                'catapp:home-detail',
+                args=[home_id], 
+                request=self.context['request']
+            )
             for home_id in homes
         ]
         return result
@@ -81,8 +88,11 @@ class CatSerializer(serializers.HyperlinkedModelSerializer):
         # and Human-Home is Many-to-One relationship, hence one cat
         # will only has one home related to it
         cat_home = Human.objects.get(id=obj.owner_id).home_id
-        result = reverse('catapp:home-detail',
-                         args=[cat_home], request=self.context['request'])
+        result = reverse(
+            'catapp:home-detail',
+            args=[cat_home], 
+            request=self.context['request']
+        )
         return result
 
     class Meta:

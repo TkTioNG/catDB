@@ -1,0 +1,63 @@
+{% extends "catapp/base.html" %} 
+
+{% block content %} 
+<div class="row">
+  <div class="col-3">
+    <div class="nav flex-column nav-pills" id="nav-tab" role="tablist">
+      <a class="nav-link active" id="nav-breeds-tab" data-toggle="tab" href="#nav-breeds" role="tab" aria-controls="nav-breeds" aria-selected="true">Breeds</a>
+      <a class="nav-link" id="nav-cats-tab" data-toggle="tab" href="#nav-cats" role="tab" aria-controls="nav-cats" aria-selected="false">Cats</a>
+      <a class="nav-link" id="nav-homes-tab" data-toggle="tab" href="#nav-homes" role="tab" aria-controls="nav-homes" aria-selected="false">Homes</a>
+      <a class="nav-link" id="nav-humans-tab" data-toggle="tab" href="#nav-humans" role="tab" aria-controls="nav-humans" aria-selected="false">Humans</a>
+    </div>
+  </div>
+  <div class="col-9">
+    <div class="tab-content" id="nav-tabContent">
+      <div class="tab-pane fade show active" id="nav-breeds" role="tabpanel" aria-labelledby="nav-breeds-tab">
+        <h3>Breed List</h3>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item active" aria-current="page">
+            List all the breeds available and add new breed for the cats.
+            </li>
+          </ol>
+        </nav>
+        <a href="{% url 'catapp:breeds' %}" class="btn btn-info btn-lg btn-block" role="button">Go to Breeds</a>
+      </div>
+      <div class="tab-pane fade" id="nav-cats" role="tabpanel" aria-labelledby="nav-cats-tab">
+        <h3>Cat List</h3>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item active" aria-current="page">
+            List all the cat available and add new cat in the database.
+            </li>
+          </ol>
+        </nav>
+        <a href="{% url 'catapp:cats' %}" class="btn btn-info btn-lg btn-block" role="button">Go to Cats</a>
+      </div>
+      <div class="tab-pane fade" id="nav-homes" role="tabpanel" aria-labelledby="nav-homes-tab">
+        <h3>Home List</h3>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item active" aria-current="page">
+            List all the home available and add new home for the cat and cat owner.
+            </li>
+          </ol>
+        </nav>
+        <a href="{% url 'catapp:homes' %}" class="btn btn-info btn-lg btn-block" role="button">Go to Homes</a>
+      </div>
+      <div class="tab-pane fade" id="nav-humans" role="tabpanel" aria-labelledby="nav-humans-tab">
+        <h3>Cat owner List</h3>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item active" aria-current="page">
+            List all the cat owner available and add new cat owner in the database.
+            </li>
+          </ol>
+        </nav>
+        <a href="{% url 'catapp:humans' %}" class="btn btn-info btn-lg btn-block" role="button">Go to Humans</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "catapp/base.html" %} 
+
+{% block content %} 
+
+<h3>Cat Owner List</h3>
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item active" aria-current="page">
+    Below shows all the cat owner available in the database.
+    </li>
+  </ol>
+</nav>
+
+{% if success %}
+  <div id="successModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Owner Details</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>The new cat is successfully added to the database.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    $(document).ready(function(){
+        $("#successModal").modal('show');
+    });
+  </script>
+{% endif %}
+
+{% if form %}
+  <button type="button" class="btn btn-primary" style="float: right; margin-bottom: 10px;" data-toggle="modal" data-target="#addHumanModal">
+    Add New Owner
+  </button>
+  <div id="addHumanModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Owner Details</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form action="{% url 'catapp:humans' %}" method="post">
+            {% csrf_token %}
+            {{ form }}
+            <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Add</button>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if humans %}
+  {% if humans|length > 0 %}
+    <table class="table table-striped">
+      <thead class="thead-dark">
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Owner Name</th>
+          <th scope="col">Gender</th>
+          <th scope="col">Date of birth</th>
+          <th scope="col">Home</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for human in humans %}
+        <tr>
+          <th scope="row">{{ forloop.counter }}</th>
+          <td>{{ human.name }}</td>
+          <td>{{ human.gender }}</td>
+          <td>{{ human.date_of_birth }}</td>
+          <td>{{ human.home }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="alert alert-secondary" role="alert">
+      No humans are available.
+    </div>
+  {% endif %}
+{% else %}
+  {% if errors %}
+    <div class="alert alert-danger" role="alert">
+      {{errors}}
+    </div>
+  {% else %}
+    <div class="alert alert-secondary" role="alert">
+      No humans are available.
+    </div>
+  {% endif %}
+{% endif %}
+
+{% endblock %}
